@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "project": "页息 · 纸面写作",
+  "round": "02",
+  "brief": "已选第二套单列沉浸结构。改为亮色纸面、黑色宋体、文学杂志排版，直接编辑 Markdown。左为初稿，右为深化后的纸面版。",
+  "candidates": [
+    {
+      "id": "solo-original",
+      "name": "独页 · 初稿",
+      "baseline": true,
+      "kind": "html",
+      "source": "solo-round1.html",
+      "interactive": true,
+      "concept": "单列 Markdown 原文与按需出现的文稿目录。",
+      "typography": "32px 等宽标题、18px 正文",
+      "palette": [
+        "#242329",
+        "#dedce1",
+        "#bcb0d3"
+      ],
+      "traits": [
+        "单列写作",
+        "顶栏目录",
+        "深色等宽排版"
+      ]
+    },
+    {
+      "id": "pagehush",
+      "name": "页息 · 纸面版",
+      "kind": "html",
+      "source": "solo.html",
+      "interactive": true,
+      "concept": "像摊开一本文学刊物：把正文留在正中，把管理和工具留在页边。",
+      "typography": "宋体标题 43px / 正文 19px、1.95 行高；Markdown 标记用灰色小字。",
+      "palette": [
+        "#f8f7f2",
+        "#22231f",
+        "#72746d"
+      ],
+      "traits": [
+        "亮色纸张与黑色文字",
+        "Markdown 原文带排版层级",
+        "自动保存、预览与 .md 导出"
+      ]
+    }
+  ]
+}

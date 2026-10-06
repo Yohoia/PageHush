@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "project": "页息 · 文稿页视觉与动效方向",
+  "brief": "单人写作工作台的文稿目录。用户来这里找回、继续和判断文章状态；所有方案保持标题、摘要、分类、标签、日期与状态可读，并加入克制的入场、筛选和悬停反馈。",
+  "round": "01",
+  "candidates": [
+    {
+      "id": "current-library",
+      "name": "现状",
+      "baseline": true,
+      "kind": "image",
+      "source": "baseline.png",
+      "concept": "当前正式应用中的文稿页占位结构，已有搜索、状态筛选和空状态。",
+      "typography": "DM Sans / Inter 风格；当前应用主题变量。",
+      "palette": ["#fcfcfa", "#222220", "#72746d"],
+      "traits": ["结构基线", "尚无真实条目", "动效较弱"]
+    },
+    {
+      "id": "quiet-index",
+      "name": "纸面目录",
+      "kind": "html",
+      "source": "quiet-index.html",
+      "interactive": true,
+      "concept": "延续呼吸白页：目录像一张安静索引，标题轻微前进，页边线扫过。",
+      "typography": "DM Sans / Inter 标题与 UI；系统中文回退。",
+      "palette": ["#fcfcfa", "#222220", "#6f7a65"],
+      "traits": ["行式目录", "标题位移与下划线扫动", "筛选重播入场动画", "适合大量文章"]
+    },
+    {
+      "id": "editorial-catalogue",
+      "name": "页息刊物",
+      "kind": "html",
+      "source": "editorial-catalogue.html",
+      "interactive": true,
+      "concept": "把文稿库视作一本连续刊物，左侧固定刊物说明，右侧篇目编号清晰。",
+      "typography": "62px Medium 大标题、29px 篇目标题、小型英文标签。",
+      "palette": ["#f4efe4", "#1d1d18", "#a94d38"],
+      "traits": ["双栏刊物结构", "编号与页边状态", "悬停展开页边红线", "品牌仪式感最强"]
+    },
+    {
+      "id": "typographic-shelf",
+      "name": "字卡书架",
+      "kind": "html",
+      "source": "typographic-shelf.html",
+      "interactive": true,
+      "concept": "用每篇文章的首字或关键词生成轻量字卡，让库房更可视但不使用照片。",
+      "typography": "卡片标题 23px；字卡大字 54px；元信息 11–13px。",
+      "palette": ["#f7f8f6", "#20221d", "#6c8767"],
+      "traits": ["响应式卡片网格", "首字视觉记忆", "悬停上浮", "适合按标题浏览"]
+    },
+    {
+      "id": "archive-stream",
+      "name": "时间归档",
+      "kind": "html",
+      "source": "archive-stream.html",
+      "interactive": true,
+      "concept": "以时间线组织所有文稿，适合寻找某一天写下的内容与最近修改脉络。",
+      "typography": "58px 页面标题、22px 条目标题、月份英文 Editorial Label。",
+      "palette": ["#fbfaf7", "#222220", "#8f9b82"],
+      "traits": ["月份分组", "时间线生长动画", "条目横向入场", "适合回看写作历程"]
+    }
+  ]
+}

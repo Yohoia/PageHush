@@ -1,0 +1,58 @@
+[
+  {
+    "file": "library-1280x900.png",
+    "state": "library",
+    "size": "1280x900",
+    "zoom": 1,
+    "issues": []
+  },
+  {
+    "file": "taxonomy-category-1280x900.png",
+    "state": "taxonomy-category",
+    "size": "1280x900",
+    "zoom": 1,
+    "issues": []
+  },
+  {
+    "file": "taxonomy-tags-1280x900.png",
+    "state": "taxonomy-tags",
+    "size": "1280x900",
+    "zoom": 1,
+    "issues": []
+  },
+  {
+    "file": "taxonomy-manage-1280x900.png",
+    "state": "taxonomy-manage",
+    "size": "1280x900",
+    "zoom": 1,
+    "issues": []
+  },
+  {
+    "file": "library-390x844.png",
+    "state": "library",
+    "size": "390x844",
+    "zoom": 1,
+    "issues": []
+  },
+  {
+    "file": "taxonomy-category-390x844.png",
+    "state": "taxonomy-category",
+    "size": "390x844",
+    "zoom": 1,
+    "issues": []
+  },
+  {
+    "file": "taxonomy-tags-390x844.png",
+    "state": "taxonomy-tags",
+    "size": "390x844",
+    "zoom": 1,
+    "issues": []
+  },
+  {
+    "file": "taxonomy-manage-390x844.png",
+    "state": "taxonomy-manage",
+    "size": "390x844",
+    "zoom": 1,
+    "issues": []
+  }
+]

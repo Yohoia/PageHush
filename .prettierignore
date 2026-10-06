@@ -1,0 +1,7 @@
+node_modules
+packages/*/dist
+packages/*/build
+design/writing/evidence
+design/writing/vendor
+test-results
+playwright-report

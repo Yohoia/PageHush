@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>呼吸白页 · 页息编辑器</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:#fcfcfa;color:#222220;font-family:"Noto Serif SC","Source Han Serif SC","Songti SC",serif;min-height:100vh}
+.app{min-height:100vh;display:flex;flex-direction:column}
+header{height:76px;display:flex;align-items:center;justify-content:space-between;gap:24px;margin:0 38px}
+.brand{display:flex;align-items:center;gap:11px;color:inherit;text-decoration:none}.brand img:first-child{width:34px;height:34px}.brand img:last-child{height:34px}
+nav{display:flex;align-items:center;gap:7px;font-family:"Inter","IBM Plex Sans SC","PingFang SC",sans-serif;font-size:13px;color:#77766f}button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+nav button{min-height:34px;padding:0 10px;border-radius:99px}nav button:hover{background:#f0f0ec;color:#222220}.save{display:flex;align-items:center;gap:6px;color:#6f7a65}.save i{width:6px;height:6px;border-radius:50%;background:#6f7a65}
+main{flex:1;width:min(680px,calc(100% - 44px));margin:0 auto;padding:54px 0 130px;text-align:center}
+.kicker{font:11px/1 "Inter","IBM Plex Sans SC",sans-serif;letter-spacing:.18em;color:#8c8b82;text-transform:uppercase}
+h1{margin:22px 0 14px;font-size:54px;line-height:1.16;font-weight:500;letter-spacing:-.02em;outline:none}
+.date{font:12px/1 "Inter","IBM Plex Sans SC",sans-serif;color:#8c8b82;margin-bottom:48px}
+.article{text-align:left;font-size:19px;line-height:2;letter-spacing:.01em;outline:none}
+.article p{margin:0 0 1em}.article h2{font-size:28px;line-height:1.4;font-weight:500;margin:48px 0 18px}
+.article blockquote{margin:0 0 1em;padding-left:20px;border-left:1px solid #b9c0ac;color:#6a7263;font-style:normal}
+.article ul{padding-left:24px;margin:0 0 1em}.article li{margin:9px 0}
+.caret{display:inline-block;width:1.5px;height:1.15em;vertical-align:-.19em;background:#6f7a65;margin-left:1px}
+.dock{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);display:flex;gap:4px;padding:6px;border-radius:99px;background:rgba(252,252,250,.72);border:1px solid #e4e4de;backdrop-filter:blur(12px);font-family:"Inter","IBM Plex Sans SC",sans-serif}
+.dock button{width:35px;height:35px;border-radius:99px;color:#77766f}.dock button:hover{background:#f0f0ec;color:#222220}
+aside{position:fixed;right:40px;bottom:44px;font:11px/1.7 "Inter","IBM Plex Sans SC",sans-serif;color:#a3a29a;text-align:right}
+@media(max-width:780px){header{margin:0 20px}.brand img:first-child{width:30px;height:30px}.brand img:last-child{height:30px}nav button:nth-child(2){display:none}main{padding:38px 0 118px}h1{font-size:41px}.article{font-size:18px}aside{display:none}.dock{bottom:20px}}
+</style></head><body>
+<div class="app"><header><a class="brand" href="#"><img src="img/logo.png" alt=""><img src="img/chinese-logo.png" alt="页息"></a><nav><button>文稿</button><button>导出</button><button>＋ 新建</button><span class="save"><i></i>草稿</span></nav></header>
+<main><p class="kicker">Essay · 随笔</p><h1 contenteditable="true" spellcheck="false">把日子，写慢一点</h1><p class="date">2026 年 10 月 6 日 · 482 字</p><article class="article" contenteditable="true" spellcheck="false"><p>午后的光落在桌面上，杯里的茶已经凉了。我关掉几个不停闪动的窗口，打开一张空白的纸。<span class="caret"></span></p><p>有时候，写作不为抵达哪里。只是想把匆忙经过的日子，重新过一遍。</p><h2>从一件小事开始</h2><blockquote>那些没有被记下来的瞬间，并不是没有发生。只是我们走得太快。</blockquote><ul><li>记下一个今天看到的细节</li><li>写一句还没有答案的话</li><li>允许这一页暂时没有结尾</li></ul></article></main>
+<div class="dock" aria-label="编辑工具"><button title="标题">H</button><button title="强调">B</button><button title="引用">❝</button><button title="列表">≡</button><button title="公式">∑</button><button title="代码">⌗</button></div><aside>输入三分钟<br>自动保存待确认</aside></div></body></html>

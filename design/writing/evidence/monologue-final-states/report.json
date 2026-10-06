@@ -1,0 +1,30 @@
+[
+  {
+    "file": "preview-1280x900.png",
+    "state": "preview",
+    "size": "1280x900",
+    "zoom": 1,
+    "issues": []
+  },
+  {
+    "file": "long-title-1280x900.png",
+    "state": "long-title",
+    "size": "1280x900",
+    "zoom": 1,
+    "issues": []
+  },
+  {
+    "file": "preview-390x844.png",
+    "state": "preview",
+    "size": "390x844",
+    "zoom": 1,
+    "issues": []
+  },
+  {
+    "file": "long-title-390x844.png",
+    "state": "long-title",
+    "size": "390x844",
+    "zoom": 1,
+    "issues": []
+  }
+]

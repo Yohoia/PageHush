@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "project": "页息 · 文稿目录",
+  "round": "03",
+  "brief": "沿用已确定的纸面文学风格。文稿从紧凑浮层扩展为独立篇目页面：编号、标题、摘录、分类与日期；新用户直接进入欢迎文稿，可从编辑器或目录新建文章。此页为修改前后的桌面截图留档，交互请使用 solo.html。",
+  "candidates": [
+    {
+      "kind": "image",
+      "typography": "宋体标题、纸面正文，无衬线工具；暖白背景与黑色字体。",
+      "palette": [
+        "#f8f7f2",
+        "#22231f",
+        "#72746d"
+      ],
+      "id": "library-before",
+      "name": "原文稿浮层",
+      "baseline": true,
+      "source": "evidence/library-before/library-1280x900.png",
+      "concept": "编辑器中按需切换文章。",
+      "traits": [
+        "标题与日期",
+        "管理区域局限于浮层",
+        "新建需要先打开目录"
+      ]
+    },
+    {
+      "kind": "image",
+      "typography": "宋体标题、纸面正文，无衬线工具；暖白背景与黑色字体。",
+      "palette": [
+        "#f8f7f2",
+        "#22231f",
+        "#72746d"
+      ],
+      "id": "library-after",
+      "name": "独立文稿目录",
+      "source": "evidence/library-final/library-1280x900.png",
+      "concept": "像打开自己的文学刊物目录，一眼找到写过的文字。",
+      "traits": [
+        "标题和正文摘录",
+        "搜索、分类、排序",
+        "编辑器与目录均可新建"
+      ]
+    }
+  ]
+}

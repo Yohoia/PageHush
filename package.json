@@ -1,0 +1,39 @@
+{
+  "name": "pagehush",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "\u9875\u606f PageHush\uff0c\u4e00\u4e2a\u9762\u5411\u4e2a\u4eba Astro \u535a\u5ba2\u7684 Markdown / MDX \u6587\u7ae0\u5de5\u4f5c\u53f0\u3002",
+  "workspaces": [
+    "packages/web",
+    "packages/api",
+    "packages/worker",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @pagehush/web",
+    "dev:api": "npm run dev --workspace @pagehush/api",
+    "build": "npm run build --workspace @pagehush/shared && npm run build --workspace @pagehush/api && npm run build --workspace @pagehush/worker && npm run build --workspace @pagehush/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write \"packages/**/*.{ts,tsx,css,html}\" \"*.{json,md}\"",
+    "format:check": "prettier --check \"packages/**/*.{ts,tsx,css,html}\" \"*.{json,md}\"",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.19.1",
+    "eslint": "10.12.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3"
+  },
+  "engines": {
+    "node": ">=24.21.0",
+    "npm": ">=11.19.0"
+  }
+}

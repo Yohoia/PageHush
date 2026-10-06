@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "project": "写作页 · 三种安静的工作方式",
+  "brief": "为长期写作者设计 Markdown 笔记网站。比较正文编辑、笔记导航、文章结构和专注状态；三套使用同一篇中文随笔。",
+  "round": "01",
+  "candidates": [
+    {
+      "id": "paper",
+      "name": "纸间",
+      "concept": "像翻开一本常用的笔记本：让正文成为重心，目录与大纲在余光里。",
+      "typography": "宋体正文 18px / 1.95，宋体标题 37px；系统黑体用于 12–14px 工具和目录。",
+      "palette": [
+        "#fbfaf7",
+        "#efeee8",
+        "#4b6555"
+      ],
+      "traits": [
+        "笔记目录 + 单列写作 + 文章大纲",
+        "可编辑排版与 Markdown 原文切换",
+        "推荐：日常长时间写作"
+      ],
+      "kind": "html",
+      "source": "paper.html",
+      "interactive": true
+    },
+    {
+      "id": "solo",
+      "name": "独页",
+      "concept": "像夜里只亮着的一张书桌：收起文件管理，让一句接着一句的输入保持连续。",
+      "typography": "Menlo 等宽字体与苹方混排，32px 标题 / 18px 正文，行高 2.15；正文窄列。",
+      "palette": [
+        "#242329",
+        "#dedce1",
+        "#bcb0d3"
+      ],
+      "traits": [
+        "无常驻侧栏，顶栏唤出笔记",
+        "纯文本 Markdown，底部视图切换",
+        "适合连续写作与键盘输入"
+      ],
+      "kind": "html",
+      "source": "solo-round1.html",
+      "interactive": true
+    },
+    {
+      "id": "proof",
+      "name": "校样",
+      "concept": "像编辑的校对桌：原文和读者看到的页面同时在场，随写随检查。",
+      "typography": "Menlo 15px 原文；系统黑体 17px 阅读正文、32px 标题，行高 1.85。",
+      "palette": [
+        "#f6f6f4",
+        "#292a2c",
+        "#a94d38"
+      ],
+      "traits": [
+        "窄导航轨 + 原文与预览分屏",
+        "预览实时更新，原文可独立展开",
+        "适合结构化笔记与文章整理"
+      ],
+      "kind": "html",
+      "source": "proof.html",
+      "interactive": true
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "project": "页息 · 分类与标签",
+  "round": "04",
+  "brief": "沿用已定纸面篇目页。新增每篇文稿的单分类、多标签，以及手动创建和分配；目录可按分类、标签和关键词组合寻找。此页为前后截图留档，实际操作请进入 solo.html。",
+  "candidates": [
+    {
+      "kind": "image",
+      "typography": "宋体标题、纸面正文，无衬线工具；暖白背景与黑色字体。",
+      "palette": [
+        "#f8f7f2",
+        "#22231f",
+        "#72746d"
+      ],
+      "id": "before-taxonomy",
+      "name": "篇目目录",
+      "baseline": true,
+      "source": "evidence/library-final/library-1280x900.png",
+      "concept": "完整展示文章与短摘录。",
+      "traits": [
+        "标题与摘录",
+        "分类来自文稿原有分组",
+        "支持搜索与排序"
+      ]
+    },
+    {
+      "kind": "image",
+      "typography": "宋体标题、纸面正文，无衬线工具；暖白背景与黑色字体。",
+      "palette": [
+        "#f8f7f2",
+        "#22231f",
+        "#72746d"
+      ],
+      "id": "with-taxonomy",
+      "name": "篇目与分类标签",
+      "source": "evidence/taxonomy-final/library-1280x900.png",
+      "concept": "以轻量文字呈现分类与标签，让作者自行整理文章。",
+      "traits": [
+        "每篇文章一个分类、多个标签",
+        "编辑器分配，目录管理创建",
+        "组合筛选与关键词搜索"
+      ]
+    }
+  ]
+}
