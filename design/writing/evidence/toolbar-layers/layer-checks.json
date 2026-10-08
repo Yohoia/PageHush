@@ -1,0 +1,28 @@
+[
+  {
+    "class": "tiptap-popover",
+    "headerZ": "60",
+    "label": "Link",
+    "wrapperZ": "70",
+    "zIndex": "70"
+  },
+  {
+    "class": "tiptap-dropdown-menu-content",
+    "headerZ": "60",
+    "label": "Format text as heading",
+    "wrapperZ": "70",
+    "zIndex": "70"
+  },
+  {
+    "class": "tiptap-dropdown-menu-content",
+    "headerZ": "60",
+    "label": "List options",
+    "wrapperZ": "70",
+    "zIndex": "70"
+  },
+  {
+    "headerZ": "60",
+    "mode": "fullscreen",
+    "zIndex": "70"
+  }
+]

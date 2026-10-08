@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+/pagehush-release/
 
 # Test and tooling artifacts
 coverage/

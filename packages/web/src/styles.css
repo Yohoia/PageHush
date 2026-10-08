@@ -711,7 +711,9 @@
 }
 
 body:has(.editor-page) .tiptap-dropdown-menu-content,
-body:has(.editor-page) .tiptap-popover-content {
+body:has(.editor-page) .tiptap-dropdown-menu-sub-content,
+body:has(.editor-page) .tiptap-popover,
+body:has(.editor-page) .tiptap-tooltip {
   z-index: 70;
 }
 
