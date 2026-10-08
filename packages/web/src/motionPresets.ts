@@ -21,8 +21,3 @@ export const statusIconTransition: Transition = {
   duration: 0.16,
   ease: 'easeOut',
 };
-
-export const editorLayoutTransition: Transition = {
-  duration: 0.78,
-  ease: [0.38, 0, 0.16, 1],
-};

@@ -133,12 +133,12 @@ export function AppShell() {
               </button>
             </div>
           </header>
-          <main className="flex-1">
-            <div className="page-shell">
+          <main className="flex flex-1 flex-col">
+            <div className="page-shell flex flex-1 flex-col">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.section
                   key={location.pathname}
-                  className="w-full"
+                  className="flex w-full flex-1 flex-col"
                   variants={pageVariants}
                   initial="hidden"
                   animate="visible"

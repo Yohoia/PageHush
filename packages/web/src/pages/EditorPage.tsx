@@ -9,17 +9,19 @@ import {
   type ChangeEvent,
 } from 'react';
 import type { Editor } from '@tiptap/react';
-import { ArrowLeft, ChevronDown, Images, Maximize, Minimize, Plus, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Images, Plus, X } from 'lucide-react';
 import { EditorLayout } from '@/components/EditorLayout';
+import { ArticleActions } from '@/components/ArticleActions';
+import { useEditorFullscreen } from '@/hooks/use-editor-fullscreen';
 import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
 import { articleTopics, articles, defaultArticleContent, MAX_ARTICLE_TAGS } from '@/data/articles';
 import { useNavigate, useParams } from 'react-router';
-import { AnimatePresence, motion } from 'motion/react';
-import { editorLayoutTransition } from '../motionPresets';
+import { motion } from 'motion/react';
 import {
   ApiError,
   type ApiArticle,
   createArticle,
+  deleteArticle,
   deleteTopic as deleteTopicRequest,
   getArticle,
   listTopics,
@@ -28,10 +30,10 @@ import {
 } from '@/lib/api';
 
 const newArticle = {
-  title: '把日子，写慢一点',
-  topic: '随笔',
-  publishedAt: '2026-10-06',
-  tags: ['写作', 'Markdown'],
+  title: '',
+  topic: '学习',
+  publishedAt: new Date().toLocaleDateString('sv-SE'),
+  tags: [] as string[],
 };
 
 function countWords(text: string): number {
@@ -66,13 +68,22 @@ export function EditorPage() {
   const coverInputId = useId();
 
   const [remoteArticle, setRemoteArticle] = useState<ApiArticle | null>(null);
-  const [articleLoading, setArticleLoading] = useState(Boolean(selectedArticle));
+  const [articleLoading, setArticleLoading] = useState(Boolean(articleSlug));
   const [articleError, setArticleError] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState(fallbackContent);
   const [editorContentVersion, setEditorContentVersion] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
+  const [saveState, setSaveState] = useState<'idle' | 'saved' | 'published' | 'unpublished'>(
+    'idle',
+  );
+
+  useEffect(() => {
+    if (saveState === 'idle') return;
+
+    const timer = window.setTimeout(() => setSaveState('idle'), 1800);
+    return () => window.clearTimeout(timer);
+  }, [saveState]);
 
   const [cover, setCover] = useState<string | null>(selectedArticle?.cover ?? null);
   const [coverAssetId, setCoverAssetId] = useState<string | null>(null);
@@ -87,7 +98,21 @@ export function EditorPage() {
   const [topicQuery, setTopicQuery] = useState('');
   const [isTagInputVisible, setIsTagInputVisible] = useState(false);
   const [tagQuery, setTagQuery] = useState('');
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const {
+    rootRef,
+    isFullscreen,
+    changeFullscreen,
+    toggleFullscreen: toggleEditorFullscreen,
+  } = useEditorFullscreen();
+  const actionLockRef = useRef(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 8);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const [topicOptions, setTopicOptions] = useState(() =>
     articleTopics
@@ -155,10 +180,9 @@ export function EditorPage() {
         setCover(data.cover);
         setCoverAssetId(data.coverAssetId);
       })
-      .catch((_error: unknown) => {
+      .catch(() => {
         if (cancelled) return;
-        // API 不可用时继续使用静态兜底文章，避免破坏布局。
-        setArticleError(null);
+        setArticleError('文章加载失败，请刷新后重试');
       })
       .finally(() => {
         if (!cancelled) setArticleLoading(false);
@@ -214,14 +238,12 @@ export function EditorPage() {
         setIsTagInputVisible(false);
       }
 
-      if (isFullscreen) {
-        setIsFullscreen(false);
-      }
+      changeFullscreen(false);
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isTopicMenuOpen, isFullscreen, isTagInputVisible]);
+  }, [isTopicMenuOpen, isFullscreen, isTagInputVisible, changeFullscreen]);
 
   useEffect(() => {
     if (isTagInputVisible) {
@@ -284,7 +306,13 @@ export function EditorPage() {
   const saveArticle = useCallback(async () => {
     const editor = editorRef.current;
 
-    if (!editor || isSaving || articleLoading) return;
+    if (!editor || actionLockRef.current || articleLoading) return;
+    if (articleSlug && !remoteArticle) {
+      setSaveError('文章尚未加载成功，请刷新后重试');
+      return;
+    }
+
+    actionLockRef.current = true;
 
     setIsSaving(true);
     setSaveError(null);
@@ -292,6 +320,10 @@ export function EditorPage() {
 
     try {
       const content = editor.getMarkdown();
+      const status = remoteArticle?.status ?? 'draft';
+      if (status === 'published' && (!title.trim() || !editor.getText().trim())) {
+        throw new Error('请填写文章标题和正文后再发布');
+      }
 
       const payload = {
         title: title.trim() || '无标题',
@@ -304,7 +336,7 @@ export function EditorPage() {
         ).slice(0, 500),
         content,
         format: 'md' as const,
-        status: 'draft' as const,
+        status,
         language: remoteArticle?.language ?? ('zh' as const),
         author: remoteArticle?.author ?? 'Yohoia',
         topicName: topic,
@@ -329,16 +361,38 @@ export function EditorPage() {
         navigate(`/articles/${saved.slug}`, { replace: true });
       }
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : '保存失败');
+      setSaveError(
+        error instanceof ApiError
+          ? '操作失败，请检查连接后重试'
+          : error instanceof Error
+            ? error.message
+            : '保存失败',
+      );
     } finally {
+      actionLockRef.current = false;
       setIsSaving(false);
     }
-  }, [articleLoading, topic, coverAssetId, isSaving, navigate, remoteArticle, tags, title]);
+  }, [articleLoading, articleSlug, topic, coverAssetId, navigate, remoteArticle, tags, title]);
+
+  const removeArticle = async () => {
+    if (!remoteArticle || actionLockRef.current) return;
+    actionLockRef.current = true;
+    setIsSaving(true);
+    try {
+      await deleteArticle(remoteArticle.slug);
+      navigate('/', { replace: true });
+    } catch {
+      throw new Error('删除失败，请检查连接后重试');
+    } finally {
+      actionLockRef.current = false;
+      setIsSaving(false);
+    }
+  };
 
   const toggleFullscreen = () => {
     setIsTopicMenuOpen(false);
     setIsTagInputVisible(false);
-    setIsFullscreen((current) => !current);
+    toggleEditorFullscreen();
   };
 
   const returnToPreviousPage = () => {
@@ -398,63 +452,20 @@ export function EditorPage() {
     !editorTopics.some((item) => item.toLowerCase() === exactTopic.toLowerCase());
 
   return (
-    <section className={`editor-page ${isFullscreen ? 'is-fullscreen' : ''}`}>
-      {articleLoading ? (
-        <div className="editor-status-banner" role="status">
-          正在加载文章…
-        </div>
-      ) : null}
-
+    <section
+      ref={rootRef}
+      className={`editor-page ${isFullscreen ? 'is-fullscreen' : ''} ${isScrolled ? 'is-scrolled' : ''}`}
+      aria-busy={articleLoading}
+    >
       {articleError ? (
         <div className="editor-status-banner editor-status-error" role="alert">
           {articleError}
         </div>
       ) : null}
 
-      {selectedArticle ? (
-        <motion.button
-          type="button"
-          className="editor-floating-button editor-back-button"
-          onClick={returnToPreviousPage}
-          aria-label="返回上一页"
-          initial={{ opacity: 0, x: -8 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-        >
-          <ArrowLeft size={18} strokeWidth={1.7} aria-hidden="true" />
-        </motion.button>
-      ) : null}
-
-      <motion.button
-        type="button"
-        className="editor-floating-button editor-fullscreen-toggle"
-        onClick={toggleFullscreen}
-        aria-label={isFullscreen ? '退出全屏' : '进入全屏'}
-        aria-pressed={isFullscreen}
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-      >
-        {isFullscreen ? (
-          <Minimize size={17} strokeWidth={1.7} aria-hidden="true" />
-        ) : (
-          <Maximize size={17} strokeWidth={1.7} aria-hidden="true" />
-        )}
-      </motion.button>
-
-      <motion.button
-        type="button"
-        className="editor-save-button"
-        onClick={() => {
-          void saveArticle();
-        }}
-        disabled={isSaving || articleLoading}
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-      >
-        {isSaving ? '保存中…' : saveState === 'saved' ? '已保存' : '保存文章'}
-      </motion.button>
+      <div className="sr-only" role="status">
+        {isSaving ? '处理中…' : saveState === 'saved' ? '已保存' : ''}
+      </div>
 
       {saveError ? (
         <div className="editor-status-banner editor-status-error" role="alert">
@@ -474,111 +485,131 @@ export function EditorPage() {
       >
         {({ toolbar, search, content }) => (
           <EditorLayout
-            isFullscreen={isFullscreen}
+            back={
+              <motion.button
+                type="button"
+                className="editor-floating-button editor-back-button"
+                onClick={returnToPreviousPage}
+                aria-label="返回上一页"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                <ArrowLeft size={18} strokeWidth={1.7} aria-hidden="true" />
+              </motion.button>
+            }
+            actions={
+              <ArticleActions
+                isFullscreen={isFullscreen}
+                busy={isSaving}
+                loading={articleLoading || Boolean(articleSlug && !remoteArticle)}
+                saved={saveState !== 'idle'}
+                exists={Boolean(remoteArticle)}
+                title={title}
+                onFullscreen={toggleFullscreen}
+                onSave={() => {
+                  void saveArticle();
+                }}
+                onDelete={removeArticle}
+              />
+            }
             toolbar={toolbar}
             search={search}
             headerBefore={
-              <AnimatePresence initial={false} mode="sync">
-                {isFullscreen ? null : (
-                  <motion.div
-                    className="editor-header-stage editor-header-before"
-                    layout="position"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={editorLayoutTransition}
-                  >
-                    <div className="page-content editor-page-content">
-                      <div className="editor-taxonomy">
-                        <div className="editor-topic-picker">
-                          <button
-                            ref={topicButtonRef}
-                            type="button"
-                            className="editor-topic-button"
-                            aria-haspopup="menu"
-                            aria-expanded={isTopicMenuOpen}
-                            onClick={() => {
-                              setIsTopicMenuOpen((open) => !open);
-                              setIsTagInputVisible(false);
-                            }}
+              <div
+                className="editor-header-stage editor-header-before"
+                inert={isFullscreen}
+                aria-hidden={isFullscreen}
+              >
+                <div className="page-content editor-page-content">
+                  <div className="editor-taxonomy">
+                    <div className="editor-topic-picker">
+                      <button
+                        ref={topicButtonRef}
+                        type="button"
+                        className="editor-topic-button"
+                        aria-haspopup="menu"
+                        aria-expanded={isTopicMenuOpen}
+                        onClick={() => {
+                          setIsTopicMenuOpen((open) => !open);
+                          setIsTagInputVisible(false);
+                        }}
+                      >
+                        {topic} · TOPIC
+                        <ChevronDown size={14} strokeWidth={1.8} aria-hidden="true" />
+                      </button>
+
+                      {isTopicMenuOpen ? (
+                        <div ref={topicMenuRef} className="editor-taxonomy-menu" role="menu">
+                          <label className="editor-taxonomy-field">
+                            <span>搜索或创建主题</span>
+                            <input
+                              value={topicQuery}
+                              placeholder="输入主题名称"
+                              onChange={(event) => setTopicQuery(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.preventDefault();
+                                  selectTopic(availableTopics[0] ?? exactTopic);
+                                }
+                              }}
+                            />
+                          </label>
+
+                          <div
+                            className="editor-taxonomy-options"
+                            role="group"
+                            aria-label="可选择主题"
                           >
-                            {topic} · TOPIC
-                            <ChevronDown size={14} strokeWidth={1.8} aria-hidden="true" />
-                          </button>
-
-                          {isTopicMenuOpen ? (
-                            <div ref={topicMenuRef} className="editor-taxonomy-menu" role="menu">
-                              <label className="editor-taxonomy-field">
-                                <span>搜索或创建主题</span>
-                                <input
-                                  value={topicQuery}
-                                  placeholder="输入主题名称"
-                                  onChange={(event) => setTopicQuery(event.target.value)}
-                                  onKeyDown={(event) => {
-                                    if (event.key === 'Enter') {
-                                      event.preventDefault();
-                                      selectTopic(availableTopics[0] ?? exactTopic);
-                                    }
-                                  }}
-                                />
-                              </label>
-
+                            {availableTopics.map((item) => (
                               <div
-                                className="editor-taxonomy-options"
-                                role="group"
-                                aria-label="可选择主题"
+                                key={item}
+                                className={`editor-taxonomy-option ${
+                                  item === topic ? 'active' : ''
+                                }`}
                               >
-                                {availableTopics.map((item) => (
-                                  <div
-                                    key={item}
-                                    className={`editor-taxonomy-option ${
-                                      item === topic ? 'active' : ''
-                                    }`}
-                                  >
-                                    <button
-                                      type="button"
-                                      role="menuitem"
-                                      className="editor-taxonomy-option-label"
-                                      onClick={() => selectTopic(item)}
-                                    >
-                                      {item}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      role="menuitem"
-                                      className="editor-taxonomy-option-delete"
-                                      aria-label={`删除主题 ${item}`}
-                                      disabled={editorTopics.length <= 1}
-                                      onClick={() => deleteTopic(item)}
-                                    >
-                                      <X size={12} strokeWidth={2} aria-hidden="true" />
-                                    </button>
-                                  </div>
-                                ))}
-
-                                {canCreateTopic ? (
-                                  <button
-                                    type="button"
-                                    role="menuitem"
-                                    className="create"
-                                    onClick={() => selectTopic(exactTopic)}
-                                  >
-                                    创建「{exactTopic}」并使用
-                                  </button>
-                                ) : null}
-
-                                {availableTopics.length === 0 && !canCreateTopic ? (
-                                  <span className="editor-taxonomy-empty">没有找到主题</span>
-                                ) : null}
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className="editor-taxonomy-option-label"
+                                  onClick={() => selectTopic(item)}
+                                >
+                                  {item}
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className="editor-taxonomy-option-delete"
+                                  aria-label={`删除主题 ${item}`}
+                                  disabled={editorTopics.length <= 1}
+                                  onClick={() => deleteTopic(item)}
+                                >
+                                  <X size={12} strokeWidth={2} aria-hidden="true" />
+                                </button>
                               </div>
-                            </div>
-                          ) : null}
+                            ))}
+
+                            {canCreateTopic ? (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="create"
+                                onClick={() => selectTopic(exactTopic)}
+                              >
+                                创建「{exactTopic}」并使用
+                              </button>
+                            ) : null}
+
+                            {availableTopics.length === 0 && !canCreateTopic ? (
+                              <span className="editor-taxonomy-empty">没有找到主题</span>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
+                      ) : null}
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
+                </div>
+              </div>
             }
             title={
               <div className="editor-title-stage">
@@ -590,149 +621,143 @@ export function EditorPage() {
                   accept="image/*"
                   onChange={handleCoverChange}
                 />
-                <motion.textarea
+                <textarea
                   className="editor-title-input"
                   value={title}
                   placeholder="标题"
                   aria-label="文章标题"
                   rows={1}
                   ref={titleInputRef}
-                  layout
-                  transition={editorLayoutTransition}
+                  onTransitionEnd={() => {
+                    if (!supportsFieldSizing()) resizeTitleInput();
+                  }}
                   onChange={(event) => setTitle(event.target.value)}
-                  onTransitionEnd={resizeTitleInput}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
                       event.preventDefault();
                     }
                   }}
                 />
-                <AnimatePresence initial={false}>
-                  {!isFullscreen ? (
-                    <motion.div
-                      className="editor-cover-stage"
-                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                      animate={{ opacity: 1, height: 'auto', marginTop: 24 }}
-                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                      transition={editorLayoutTransition}
-                    >
-                      {cover ? (
-                        <figure className="editor-cover">
-                          <img src={cover} alt="文章封面" />
-                          <label
-                            className="editor-cover-action"
-                            htmlFor={coverInputId}
-                            aria-label="更换封面"
-                          >
-                            <span className="editor-cover-action-icon" aria-hidden="true">
-                              <Images size={20} strokeWidth={1.6} />
-                            </span>
-                            <span className="editor-cover-action-text">更换封面</span>
-                          </label>
-                        </figure>
-                      ) : (
-                        <label className="editor-cover-empty" htmlFor={coverInputId}>
-                          <img
-                            className="editor-cover-empty-art"
-                            src="/covers/upload-cover.png"
-                            alt=""
-                          />
-                          <span className="editor-cover-empty-title">上传封面</span>
-                          <small>支持 JPG、PNG、WebP，最大 5MB</small>
+                <div className="editor-cover-stage" inert={isFullscreen} aria-hidden={isFullscreen}>
+                  <div className="editor-cover-reveal">
+                    {cover ? (
+                      <figure className="editor-cover">
+                        <img src={cover} alt="文章封面" />
+                        <label
+                          className="editor-cover-action"
+                          htmlFor={coverInputId}
+                          aria-label="更换封面"
+                        >
+                          <span className="editor-cover-action-icon" aria-hidden="true">
+                            <Images size={20} strokeWidth={1.6} />
+                          </span>
+                          <span className="editor-cover-action-text">更换封面</span>
                         </label>
-                      )}
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
-                {coverError && !isFullscreen ? (
-                  <p className="editor-cover-error" role="alert">
-                    {coverError}
-                  </p>
-                ) : null}
+                      </figure>
+                    ) : (
+                      <label className="editor-cover-empty" htmlFor={coverInputId}>
+                        <img
+                          className="editor-cover-empty-art"
+                          src="/covers/upload-cover.png"
+                          alt=""
+                        />
+                        <span className="editor-cover-empty-title">上传封面</span>
+                        <small>支持 JPG、PNG、WebP，最大 5MB</small>
+                      </label>
+                    )}
+                    {coverError ? (
+                      <p className="editor-cover-error" role="alert">
+                        {coverError}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             }
             headerAfter={
-              <AnimatePresence initial={false} mode="sync">
-                {isFullscreen ? null : (
-                  <motion.div
-                    className="editor-header-stage editor-header-after"
-                    layout="position"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={editorLayoutTransition}
-                  >
-                    <div className="page-content editor-page-content">
-                      <div className="editor-metadata">
-                        <time dateTime={article.publishedAt}>{article.publishedAt}</time>
-                        <span aria-hidden="true">·</span>
-                        <span>{characterCount} 字</span>
+              <div
+                className="editor-header-stage editor-header-after"
+                inert={isFullscreen}
+                aria-hidden={isFullscreen}
+              >
+                <div className="page-content editor-page-content">
+                  <div className="editor-metadata">
+                    <span
+                      className="editor-publication-status"
+                      data-status={remoteArticle?.status ?? 'draft'}
+                    >
+                      {remoteArticle?.status === 'published' ? '已发布' : '草稿'}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <time dateTime={remoteArticle?.publishedAt ?? article.publishedAt}>
+                      {(remoteArticle?.publishedAt ?? article.publishedAt).slice(0, 10)}
+                    </time>
+                    <span aria-hidden="true">·</span>
+                    <span>{characterCount} 字</span>
 
-                        <div className="editor-tags" aria-label="文章标签">
-                          {tags.map((tag) => (
-                            <span key={tag} className="editor-tag">
-                              <span className="editor-tag-label">#{tag}</span>
-                              <button
-                                type="button"
-                                onClick={() => removeTag(tag)}
-                                aria-label={`移除标签 ${tag}`}
-                              >
-                                <X size={12} strokeWidth={2} aria-hidden="true" />
-                              </button>
-                            </span>
-                          ))}
+                    <div className="editor-tags" aria-label="文章标签">
+                      {tags.map((tag) => (
+                        <span key={tag} className="editor-tag">
+                          <span className="editor-tag-label">#{tag}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeTag(tag)}
+                            aria-label={`移除标签 ${tag}`}
+                          >
+                            <X size={12} strokeWidth={2} aria-hidden="true" />
+                          </button>
+                        </span>
+                      ))}
 
-                          {tags.length < MAX_ARTICLE_TAGS ? (
-                            <div className="editor-tag-picker">
-                              {isTagInputVisible ? (
-                                <input
-                                  ref={tagInputRef}
-                                  className="editor-tag-input"
-                                  value={tagQuery}
-                                  placeholder="标签"
-                                  aria-label="新增标签"
-                                  onBlur={() => setIsTagInputVisible(false)}
-                                  onChange={(event) => setTagQuery(event.target.value)}
-                                  onKeyDown={(event) => {
-                                    if (event.key === 'Escape') {
-                                      event.preventDefault();
-                                      setIsTagInputVisible(false);
-                                      return;
-                                    }
+                      {tags.length < MAX_ARTICLE_TAGS ? (
+                        <div className="editor-tag-picker">
+                          {isTagInputVisible ? (
+                            <input
+                              ref={tagInputRef}
+                              className="editor-tag-input"
+                              value={tagQuery}
+                              placeholder="标签"
+                              aria-label="新增标签"
+                              onBlur={() => setIsTagInputVisible(false)}
+                              onChange={(event) => setTagQuery(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Escape') {
+                                  event.preventDefault();
+                                  setIsTagInputVisible(false);
+                                  return;
+                                }
 
-                                    if (event.key !== 'Enter') return;
+                                if (event.key !== 'Enter') return;
 
-                                    event.preventDefault();
-                                    if (addTag(tagQuery)) {
-                                      setIsTagInputVisible(false);
-                                    }
-                                  }}
-                                />
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="editor-add-tag"
-                                  aria-expanded={isTagInputVisible}
-                                  onClick={() => {
-                                    setIsTagInputVisible(true);
-                                    setTagQuery('');
-                                    setIsTopicMenuOpen(false);
-                                  }}
-                                >
-                                  <Plus size={12} strokeWidth={2} aria-hidden="true" />
-                                  标签
-                                </button>
-                              )}
-                            </div>
-                          ) : null}
+                                event.preventDefault();
+                                if (addTag(tagQuery)) {
+                                  setIsTagInputVisible(false);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className="editor-add-tag"
+                              aria-expanded={isTagInputVisible}
+                              onClick={() => {
+                                setIsTagInputVisible(true);
+                                setTagQuery('');
+                                setIsTopicMenuOpen(false);
+                              }}
+                            >
+                              <Plus size={12} strokeWidth={2} aria-hidden="true" />
+                              标签
+                            </button>
+                          )}
                         </div>
-                      </div>
-
-                      <div className="mt-3 h-px bg-line md:mt-4" aria-hidden="true" />
+                      ) : null}
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
+
+                  <div className="mt-3 h-px bg-line md:mt-4" aria-hidden="true" />
+                </div>
+              </div>
             }
           >
             {content}

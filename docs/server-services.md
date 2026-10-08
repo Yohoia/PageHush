@@ -143,7 +143,7 @@ npm run db:migrate
 npm run db:seed
 ```
 
-`db:seed` 会把当前演示文章、主题和标签写入 PostgreSQL。它是幂等的：重复执行会按 slug 更新文章，并重建文章标签关联。
+`db:seed` 仅幂等初始化“学习”分类，不再创建演示文章或标签，也不会删除已有数据。
 
 ## 对象存储
 

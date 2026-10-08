@@ -1,0 +1,35 @@
+{
+  "initial": {
+    "background": "rgb(252, 252, 250)",
+    "border": "0px",
+    "scrollbar": "none",
+    "shadow": "none",
+    "toolbarCenter": 640,
+    "top": 0,
+    "viewport": 1280
+  },
+  "scrolled": {
+    "border": "0px",
+    "scrollY": 720,
+    "scrollbar": "none",
+    "shadow": "rgba(27, 29, 26, 0.07) 0px 4px 16px 0px",
+    "top": 0
+  },
+  "rapidReverse": {
+    "bodyOpacity": "1",
+    "coverHeight": 427.5,
+    "fullscreen": false,
+    "toolbarTop": 0
+  },
+  "escapeReverse": {
+    "bodyOpacity": "1",
+    "coverHeight": 424.4453125,
+    "fullscreen": false,
+    "toolbarTop": 0
+  },
+  "escapeSettled": {
+    "bodyOpacity": "1",
+    "coverHeight": 427.5,
+    "fullscreen": false
+  }
+}

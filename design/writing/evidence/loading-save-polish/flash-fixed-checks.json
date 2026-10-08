@@ -1,0 +1,716 @@
+[
+  {
+    "cycle": 1,
+    "enter": [
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 541.0765380859375
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2332.44384765625
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2961.61572265625
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 540.82080078125
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2332.18798828125
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2961.35986328125
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 529.4061279296875
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2320.773193359375
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2949.945068359375
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 516.276123046875
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2307.643310546875
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2936.815185546875
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 505.8116455078125
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2297.1787109375
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2926.3505859375
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 487.763427734375
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2279.130615234375
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2908.302490234375
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 478.5340576171875
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2269.9013671875
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2899.0732421875
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 471.5450439453125
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2262.912353515625
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2892.084228515625
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 466.55902099609375
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2257.92626953125
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2887.09814453125
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 462.75531005859375
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2254.12255859375
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2883.29443359375
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      }
+    ],
+    "maxDownward": 0,
+    "exit": [
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      }
+    ]
+  },
+  {
+    "cycle": 2,
+    "enter": [
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 541.165771484375
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2332.532958984375
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2961.704833984375
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 539.9718627929688
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2331.339111328125
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2960.510986328125
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 522.0742797851562
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2313.44140625
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2942.61328125
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 492.59326171875
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2283.96044921875
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2913.13232421875
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 481.67718505859375
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2273.04443359375
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2902.21630859375
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 474.09716796875
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2265.46435546875
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2894.63623046875
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 464.14312744140625
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2255.51025390625
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2884.68212890625
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 459.7103271484375
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2251.077392578125
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2880.249267578125
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 457.0435791015625
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2248.41064453125
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2877.58251953125
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 456.810302734375
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2248.177490234375
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2877.349365234375
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      }
+    ],
+    "exit": [
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      }
+    ],
+    "maxDownward": 0
+  },
+  {
+    "cycle": 3,
+    "enter": [
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 537.6270751953125
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2328.994384765625
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2958.166259765625
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 534.89208984375
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2326.25927734375
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2955.43115234375
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 512.903564453125
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2304.270751953125
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2933.442626953125
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 497.34332275390625
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2288.71044921875
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2917.88232421875
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 485.3191528320313
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2276.686279296875
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2905.858154296875
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 470.2027893066406
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2261.570068359375
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2890.741943359375
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 461.9716796875
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2253.3388671875
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2882.5107421875
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 458.5533447265625
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2249.920654296875
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2879.092529296875
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 457.3289794921875
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2248.696044921875
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2877.867919921875
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      },
+      {
+        "images": [
+          {
+            "src": "/v1/assets/04df4b19-ede7-4ab1-a0c2-613916941b4a/content",
+            "top": 456.5993957519531
+          },
+          {
+            "src": "/v1/assets/b4ae3c8f-2746-44db-97f2-7c59ebf51314/content",
+            "top": 2247.966552734375
+          },
+          {
+            "src": "/v1/assets/a1311a10-1389-4a24-b224-18efb273a183/content",
+            "top": 2877.138427734375
+          }
+        ],
+        "tagsHidden": true,
+        "toolbarOpacity": "1"
+      }
+    ],
+    "exit": [
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      },
+      {
+        "tagsHidden": false,
+        "tagsOpacity": "1",
+        "toolbarOpacity": "1"
+      }
+    ],
+    "maxDownward": 0
+  }
+]

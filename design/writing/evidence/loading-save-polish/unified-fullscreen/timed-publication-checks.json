@@ -1,0 +1,26 @@
+[
+  {
+    "cycle": 1,
+    "confirmed": "lucide lucide-check",
+    "later": "lucide lucide-undo-2",
+    "toast": "文章当前已发布",
+    "url": "http://127.0.0.1:5174/",
+    "withdrawToast": "文章已撤回发布"
+  },
+  {
+    "cycle": 2,
+    "confirmed": "lucide lucide-check",
+    "later": "lucide lucide-undo-2",
+    "toast": "文章当前已发布",
+    "url": "http://127.0.0.1:5174/",
+    "withdrawToast": "文章已撤回发布"
+  },
+  {
+    "cycle": 3,
+    "confirmed": "lucide lucide-check",
+    "later": "lucide lucide-undo-2",
+    "toast": "文章当前已发布",
+    "url": "http://127.0.0.1:5174/",
+    "withdrawToast": "文章已撤回发布"
+  }
+]

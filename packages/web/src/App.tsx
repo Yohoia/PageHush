@@ -34,7 +34,7 @@ export function App() {
         <Route path="library" element={<Navigate to="/" replace />} />
         <Route path="settings" element={<Navigate to="/" replace />} />
         <Route
-          path="articles/:articleId"
+          path="articles/:articleSlug"
           element={
             <Suspense fallback={<EditorRouteFallback />}>
               <EditorPage />
