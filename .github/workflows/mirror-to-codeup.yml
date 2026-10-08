@@ -49,6 +49,8 @@ jobs:
 
       - name: Push main to Codeup
         env:
+          CODEUP_USERNAME: ${{ secrets.CODEUP_USERNAME }}
+          CODEUP_PASSWORD: ${{ secrets.CODEUP_PASSWORD }}
           CODEUP_REMOTE_URL: https://codeup.aliyun.com/69aa892db28d0aba0f5ed47e/PageHush.git
           GIT_TERMINAL_PROMPT: 0
         run: |
