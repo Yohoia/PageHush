@@ -3,7 +3,8 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 # Flow's bundled Node installer may not yet mirror the required release.
-if [[ $(node --version) != v24.21.0 || $(npm --version) != 11.19.0 ]]; then
+if ! command -v node >/dev/null || ! command -v npm >/dev/null || \
+  [[ $(node --version) != v24.21.0 || $(npm --version) != 11.19.0 ]]; then
   [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]]
   runtime=$(mktemp -d)
   trap 'rm -rf "$runtime"' EXIT
@@ -25,8 +26,9 @@ npm --version
 npm ci
 npm run typecheck
 npm run lint
-npm run test
+# Tests import the shared package's compiled entry point on fresh checkouts.
 npm run build
+npm run test
 
 # Recreate only the generated artifact directory.
 rm -rf pagehush-release
