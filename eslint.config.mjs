@@ -10,6 +10,8 @@ export default tseslint.config(
       'design/writing/vendor/**',
       'design/writing/evidence/**',
       'design-task/**',
+      '**/drizzle.config.ts',
+      '**/src/types/*.d.ts',
       'packages/web/public/**',
     ],
   },

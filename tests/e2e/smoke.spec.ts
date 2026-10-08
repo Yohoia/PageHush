@@ -1,7 +1,73 @@
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+const accessCode = readFileSync('.env', 'utf8')
+  .match(/^E2E_ACCESS_CODE=(.+)$/m)?.[1]
+  ?.trim();
+
+if (!accessCode) throw new Error('E2E_ACCESS_CODE is required in the ignored local .env file.');
+
+let sessionCookiePromise: Promise<{ name: string; value: string }> | undefined;
+
+function getSharedSessionCookie() {
+  sessionCookiePromise ??= fetch('http://127.0.0.1:8787/v1/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessCode, remember: true }),
+  }).then(async (response) => {
+    if (!response.ok) throw new Error(`Unable to prepare E2E session: ${response.status}`);
+
+    const setCookie = response.headers.get('set-cookie');
+    const [pair] = setCookie?.split(';') ?? [];
+    const [name, value] = pair?.split('=') ?? [];
+    if (!name || !value) throw new Error('E2E login did not return a session cookie');
+    return { name, value };
+  });
+
+  return sessionCookiePromise;
+}
+
+async function fillAccessCode(page: Page, code: string) {
+  const keys = page.locator('.login-key-input');
+  await expect(keys).toHaveCount(6);
+  for (let index = 0; index < code.length; index += 1) {
+    await keys.nth(index).fill(code[index]!);
+  }
+}
+async function login(page: Page) {
+  const cookie = await getSharedSessionCookie();
+  await page.context().addCookies([{ ...cookie, url: 'http://127.0.0.1:5173' }]);
+}
+
+test('protects PageHush with an access code and a server session', async ({ page }) => {
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/login\?redirect=%2F/);
+  await expect(page.getByRole('button', { name: '解锁页息' })).toBeVisible();
+
+  const unauthenticatedResponse = await page.request.get('/v1/articles');
+  expect(unauthenticatedResponse.status()).toBe(401);
+
+  await fillAccessCode(page, accessCode === '000000' ? '111111' : '000000');
+  await page.getByRole('button', { name: '解锁页息' }).click();
+  await expect(page.getByText('访问码不正确，请重新输入。')).toBeVisible();
+
+  await fillAccessCode(page, accessCode);
+  await page.getByRole('button', { name: '解锁页息' }).click();
+  await expect(page).toHaveURL('/');
+  await expect(page.locator('.article-card')).toHaveCount(8);
+
+  const authenticatedResponse = await page.request.get('/v1/articles');
+  expect(authenticatedResponse.status()).toBe(200);
+
+  await page.getByRole('button', { name: '退出' }).click();
+  await expect(page).toHaveURL('/login');
+  const loggedOutResponse = await page.request.get('/v1/articles');
+  expect(loggedOutResponse.status()).toBe(401);
+});
 
 test('shows PageHush metadata around the official Tiptap Simple Editor', async ({ page }) => {
+  await login(page);
   await page.goto('/editor');
   await expect(page.getByRole('link', { name: '页息 PageHush 首页' })).toHaveCount(0);
   await expect(page.getByText('随笔 · ESSAY')).toBeVisible();
@@ -64,6 +130,7 @@ test('shows PageHush metadata around the official Tiptap Simple Editor', async (
 
 test('editor fills the screen and enters Motion fullscreen mode', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await login(page);
   await page.goto('/articles/walking-gently');
   await expect(page.getByRole('link', { name: '页息 PageHush 首页' })).toHaveCount(0);
   await expect(page.getByRole('banner')).toHaveCount(0);
@@ -107,6 +174,7 @@ test('editor fills the screen and enters Motion fullscreen mode', async ({ page 
 });
 
 test('official Tiptap toolbar commands update active state', async ({ page }) => {
+  await login(page);
   await page.goto('/editor');
   const editor = page.getByLabel('正文编辑区');
   await editor.click();
@@ -121,6 +189,7 @@ test('official Tiptap toolbar commands update active state', async ({ page }) =>
 });
 
 test('opens the article library by default', async ({ page }) => {
+  await login(page);
   await page.goto('/');
   await expect(page.getByRole('navigation').getByRole('link', { name: '写作' })).toBeVisible();
   await expect(page.getByRole('navigation').getByRole('link', { name: '设置' })).toHaveCount(0);
@@ -259,6 +328,7 @@ test('keeps project content widths predictable across routes and viewports', asy
   ]) {
     await page.setViewportSize(viewport);
 
+    await login(page);
     await page.goto('/editor');
     const editorWidth = await page
       .locator('.page-content')
@@ -287,6 +357,7 @@ test('keeps project content widths predictable across routes and viewports', asy
 
 test('opening and adding an inline tag keeps the metadata divider stable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
   await page.goto('/editor');
   await page.getByRole('button', { name: /随笔 · ESSAY/ }).waitFor();
 
@@ -309,6 +380,7 @@ test('opening and adding an inline tag keeps the metadata divider stable', async
 });
 
 test('uploads and previews an article cover', async ({ page }) => {
+  await login(page);
   await page.goto('/editor');
   const placeholder = page.locator('.editor-cover-empty');
   await expect(placeholder).toBeVisible();

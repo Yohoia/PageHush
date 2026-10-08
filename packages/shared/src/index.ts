@@ -38,20 +38,20 @@ export const applicationStages: ApplicationStage[] = [
   {
     id: 'framework',
     title: '项目骨架',
-    status: 'in-progress',
+    status: 'ready',
     description: 'React 工作台、Fastify API、共享契约与任务包边界。',
   },
   {
     id: 'content',
     title: '内容与编辑器',
-    status: 'planned',
+    status: 'in-progress',
     description: 'Markdown / MDX 源文本、Tiptap 编辑体验与公式、代码、图表适配。',
   },
   {
     id: 'server',
     title: '服务器集成',
-    status: 'planned',
-    description: '连接服务器上已部署的 PostgreSQL 与 MinIO，不在本机启动服务。',
+    status: 'in-progress',
+    description: 'PostgreSQL 与 MinIO 已接入，继续完善数据模型、素材库与部署。',
   },
   {
     id: 'publishing',

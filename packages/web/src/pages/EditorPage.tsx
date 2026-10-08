@@ -21,6 +21,16 @@ import {
 import { useNavigate, useParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { editorLayoutTransition } from '../motionPresets';
+import {
+  ApiError,
+  type ApiArticle,
+  createArticle,
+  deleteCategory as deleteCategoryRequest,
+  getArticle,
+  listCategories,
+  updateArticle,
+  uploadCover,
+} from '@/lib/api';
 
 const newArticle = {
   title: '把日子，写慢一点',
@@ -57,29 +67,55 @@ export function EditorPage() {
     [articleId],
   );
   const article = selectedArticle ?? newArticle;
-  const articleMarkdown = selectedArticle?.markdown ?? defaultArticleMarkdown;
+  const fallbackMarkdown = selectedArticle?.markdown ?? defaultArticleMarkdown;
   const coverInputId = useId();
 
+  const [remoteArticle, setRemoteArticle] = useState<ApiArticle | null>(null);
+  const [articleLoading, setArticleLoading] = useState(Boolean(selectedArticle));
+  const [articleError, setArticleError] = useState<string | null>(null);
+  const [editorContent, setEditorContent] = useState(fallbackMarkdown);
+  const [editorContentVersion, setEditorContentVersion] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
+
   const [coverImage, setCoverImage] = useState<string | null>(selectedArticle?.image ?? null);
+  const [coverAssetId, setCoverAssetId] = useState<string | null>(null);
   const [coverObjectUrl, setCoverObjectUrl] = useState<string | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
 
   const [title, setTitle] = useState(article.title);
   const [category, setCategory] = useState(article.category);
   const [tags, setTags] = useState(article.tags);
-  const [characterCount, setCharacterCount] = useState(() => countWords(articleMarkdown));
+  const [characterCount, setCharacterCount] = useState(() => countWords(fallbackMarkdown));
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [categoryQuery, setCategoryQuery] = useState('');
   const [isTagInputVisible, setIsTagInputVisible] = useState(false);
   const [tagQuery, setTagQuery] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [deletedCategories, setDeletedCategories] = useState<Set<string>>(() => new Set());
+
+  const [categoryOptions, setCategoryOptions] = useState(() =>
+    articleCategories
+      .filter((item) => item !== '全部')
+      .map((name) => ({ id: undefined as string | undefined, name })),
+  );
+
+  const editorCategories = useMemo(
+    () => categoryOptions.map((item) => item.name),
+    [categoryOptions],
+  );
+
+  const availableCategories = useMemo(() => {
+    const query = categoryQuery.trim();
+    return query ? editorCategories.filter((item) => item.includes(query)) : editorCategories;
+  }, [categoryQuery, editorCategories]);
 
   const categoryButtonRef = useRef<HTMLButtonElement>(null);
   const categoryMenuRef = useRef<HTMLDivElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<Editor | null>(null);
 
   const supportsFieldSizing = () =>
     typeof CSS !== 'undefined' && CSS.supports('field-sizing: content');
@@ -106,15 +142,58 @@ export function EditorPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, [resizeTitleInput]);
 
-  const editorCategories = useMemo(
-    () => articleCategories.filter((item) => item !== '全部' && !deletedCategories.has(item)),
-    [deletedCategories],
-  );
+  useEffect(() => {
+    if (!articleId) return;
 
-  const availableCategories = useMemo(() => {
-    const query = categoryQuery.trim();
-    return query ? editorCategories.filter((item) => item.includes(query)) : editorCategories;
-  }, [categoryQuery, editorCategories]);
+    let cancelled = false;
+    setArticleLoading(true);
+    setArticleError(null);
+
+    getArticle(articleId)
+      .then((data) => {
+        if (cancelled) return;
+
+        setRemoteArticle(data);
+        setTitle(data.title);
+        setCategory(data.category ?? '');
+        setTags(data.tags);
+        setCharacterCount(countWords(data.content));
+        setEditorContent(data.content);
+        setEditorContentVersion((version) => version + 1);
+        setCoverImage(data.image);
+        setCoverAssetId(data.coverAssetId);
+      })
+      .catch((_error: unknown) => {
+        if (cancelled) return;
+        // API 不可用时继续使用静态兜底文章，避免破坏布局。
+        setArticleError(null);
+      })
+      .finally(() => {
+        if (!cancelled) setArticleLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [articleId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setArticleError(null);
+
+    listCategories()
+      .then((data) => {
+        if (cancelled) return;
+        setCategoryOptions(data.map((category) => ({ id: category.id, name: category.name })));
+      })
+      .catch(() => {
+        // API 不可用时保留本地分类作为离线兜底。
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -168,7 +247,7 @@ export function EditorPage() {
     };
   }, [coverObjectUrl]);
 
-  const handleCoverChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleCoverChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
@@ -183,16 +262,77 @@ export function EditorPage() {
       return;
     }
 
-    const nextObjectUrl = URL.createObjectURL(file);
-    setCoverImage(nextObjectUrl);
-    setCoverObjectUrl(nextObjectUrl);
     setCoverError(null);
-    event.target.value = '';
+
+    try {
+      const asset = await uploadCover(file);
+      setCoverImage(asset.url);
+      setCoverAssetId(asset.id);
+    } catch (error) {
+      const isValidationError = error instanceof ApiError && [400, 413, 415].includes(error.status);
+
+      if (!isValidationError) {
+        // API / MinIO 不可用时继续使用本地预览，保证编辑不中断。
+        const nextObjectUrl = URL.createObjectURL(file);
+        setCoverImage(nextObjectUrl);
+        setCoverObjectUrl(nextObjectUrl);
+      } else {
+        setCoverError(error instanceof Error ? error.message : '封面上传失败');
+      }
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const handleEditorUpdate = useCallback((editor: Editor) => {
+    editorRef.current = editor;
     setCharacterCount(countWords(editor.getText()));
   }, []);
+
+  const saveArticle = useCallback(async () => {
+    const editor = editorRef.current;
+
+    if (!editor || isSaving || articleLoading) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveState('idle');
+
+    try {
+      const content = editor.getMarkdown();
+
+      const payload = {
+        title: title.trim() || '无标题',
+        excerpt: '',
+        content,
+        format: 'md' as const,
+        status: 'draft' as const,
+        categoryName: category,
+        coverAssetId: coverAssetId || null,
+        tagNames: tags,
+      };
+
+      const saved = remoteArticle
+        ? await updateArticle(remoteArticle.id, payload)
+        : await createArticle(payload);
+
+      setRemoteArticle(saved);
+      setTitle(saved.title);
+      setCategory(saved.category ?? category);
+      setTags(saved.tags);
+      setCoverImage(saved.image);
+      setCoverAssetId(saved.coverAssetId);
+      setSaveState('saved');
+
+      if (!remoteArticle) {
+        navigate(`/articles/${saved.id}`, { replace: true });
+      }
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : '保存失败');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [articleLoading, category, coverAssetId, isSaving, navigate, remoteArticle, tags, title]);
 
   const toggleFullscreen = () => {
     setIsCategoryMenuOpen(false);
@@ -218,13 +358,23 @@ export function EditorPage() {
     setCategoryQuery('');
   };
 
-  const deleteCategory = (nextCategory: string) => {
+  const deleteCategory = async (nextCategory: string) => {
     if (editorCategories.length <= 1) return;
 
-    setDeletedCategories((current) => new Set(current).add(nextCategory));
+    const option = categoryOptions.find((item) => item.name === nextCategory);
 
-    if (category === nextCategory) {
-      setCategory(editorCategories.find((item) => item !== nextCategory) ?? '');
+    try {
+      if (option?.id) {
+        await deleteCategoryRequest(option.id);
+      }
+
+      setCategoryOptions((current) => current.filter((item) => item.name !== nextCategory));
+
+      if (category === nextCategory) {
+        setCategory(editorCategories.find((item) => item !== nextCategory) ?? '');
+      }
+    } catch (error) {
+      setArticleError(error instanceof Error ? error.message : '分类删除失败');
     }
   };
 
@@ -248,6 +398,18 @@ export function EditorPage() {
 
   return (
     <section className={`editor-page ${isFullscreen ? 'is-fullscreen' : ''}`}>
+      {articleLoading ? (
+        <div className="editor-status-banner" role="status">
+          正在加载文章…
+        </div>
+      ) : null}
+
+      {articleError ? (
+        <div className="editor-status-banner editor-status-error" role="alert">
+          {articleError}
+        </div>
+      ) : null}
+
       {selectedArticle ? (
         <motion.button
           type="button"
@@ -279,10 +441,34 @@ export function EditorPage() {
         )}
       </motion.button>
 
+      <motion.button
+        type="button"
+        className="editor-save-button"
+        onClick={() => {
+          void saveArticle();
+        }}
+        disabled={isSaving || articleLoading}
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+      >
+        {isSaving ? '保存中…' : saveState === 'saved' ? '已保存' : '保存文章'}
+      </motion.button>
+
+      {saveError ? (
+        <div className="editor-status-banner editor-status-error" role="alert">
+          {saveError}
+        </div>
+      ) : null}
+
       <SimpleEditor
-        content={articleMarkdown}
+        key={`${articleId ?? 'new'}-${editorContentVersion}`}
+        content={editorContent}
         contentType="markdown"
         ariaLabel="正文编辑区"
+        onCreate={(editor) => {
+          editorRef.current = editor;
+        }}
         onUpdate={handleEditorUpdate}
       >
         {({ toolbar, search, content }) => (

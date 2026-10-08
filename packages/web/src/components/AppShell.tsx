@@ -1,16 +1,35 @@
-import { useEffect } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { useEffect, useState } from 'react';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
-import { Plus } from 'lucide-react';
+import { LogOut, Plus } from 'lucide-react';
 import { ServiceStatus } from './ServiceStatus';
 import { pageTransition, pageVariants } from '../motionPresets';
+import { getAuthSession, logout } from '@/lib/api';
 
 const navigation = [{ to: '/editor', label: '写作', icon: Plus, end: false }];
 
 export function AppShell() {
   const location = useLocation();
+  const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'guest'>('checking');
   const isEditorRoute =
     location.pathname === '/editor' || location.pathname.startsWith('/articles/');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getAuthSession()
+      .then((session) => {
+        if (cancelled) return;
+        setAuthState(session.authenticated ? 'authenticated' : 'guest');
+      })
+      .catch(() => {
+        if (!cancelled) setAuthState('guest');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem('pagehush-theme');
@@ -18,6 +37,24 @@ export function AppShell() {
     const isDark = storedTheme === 'dark' || (storedTheme !== 'light' && prefersDark);
     document.documentElement.classList.toggle('dark', isDark);
   }, []);
+
+  if (authState === 'checking') {
+    return (
+      <div className="grid min-h-dvh place-items-center bg-paper text-sm text-muted" role="status">
+        正在检查访问状态…
+      </div>
+    );
+  }
+
+  if (authState === 'guest') {
+    const redirect = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/login?redirect=${redirect}`} replace />;
+  }
+
+  const handleLogout = async () => {
+    await logout().catch(() => undefined);
+    window.location.assign('/login');
+  };
 
   return (
     <div className="flex min-h-dvh flex-col bg-paper text-ink">
@@ -84,6 +121,16 @@ export function AppShell() {
                 ))}
               </nav>
               <ServiceStatus />
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-[3px] px-3 py-2 text-sm text-muted transition hover:bg-hover hover:text-ink"
+                onClick={() => {
+                  void handleLogout();
+                }}
+              >
+                <LogOut size={16} strokeWidth={1.6} aria-hidden />
+                退出
+              </button>
             </div>
           </header>
           <main className="flex-1">

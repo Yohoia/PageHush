@@ -2,13 +2,50 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUpRight, Plus } from 'lucide-react';
-import { articleCategories, articles, getArticleDisplayStatus } from '@/data/articles';
+import {
+  articleCategories,
+  articles as fallbackArticles,
+  getArticleDisplayStatus,
+} from '@/data/articles';
+import { listArticles, type ApiArticle } from '@/lib/api';
+
+function formatArticleDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+}
 
 export function LibraryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateAction, setShowCreateAction] = useState(false);
+  const [articles, setArticles] = useState<ApiArticle[] | typeof fallbackArticles>(
+    fallbackArticles,
+  );
+  const [articlesLoading, setArticlesLoading] = useState(true);
   const category = searchParams.get('category') ?? '全部';
   const activeCategory = articleCategories.includes(category) ? category : '全部';
+
+  useEffect(() => {
+    let cancelled = false;
+    setArticlesLoading(true);
+
+    listArticles()
+      .then((data) => {
+        if (cancelled) return;
+        setArticles(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setArticles(fallbackArticles);
+      })
+      .finally(() => {
+        if (!cancelled) setArticlesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const visibleArticles = useMemo(
     () =>
@@ -32,6 +69,12 @@ export function LibraryPage() {
 
   return (
     <section className="page-wide pb-32 pt-4">
+      {articlesLoading ? (
+        <div className="article-loading" role="status">
+          正在加载文章…
+        </div>
+      ) : null}
+
       <div className="article-controls">
         <p className="article-count" aria-live="polite">
           <strong>{String(visibleArticles.length).padStart(2, '0')}</strong>
@@ -74,7 +117,7 @@ export function LibraryPage() {
               }}
             >
               <Link
-                to={`/articles/${article.id}`}
+                to={`/articles/${'slug' in article && article.slug ? article.slug : article.id}`}
                 className="article-card-link"
                 aria-label={`进入文章：${article.title}`}
               >
@@ -85,7 +128,7 @@ export function LibraryPage() {
                 >
                   <img
                     className="article-card-media"
-                    src={article.image}
+                    src={article.image ?? undefined}
                     alt=""
                     loading="lazy"
                     decoding="async"
@@ -109,7 +152,7 @@ export function LibraryPage() {
                   <div className="article-card-spacer" aria-hidden="true" />
                   <div className="article-card-foot">
                     <span>
-                      {article.date} · {article.readingTime}
+                      {formatArticleDate(article.date)} · {article.readingTime}
                     </span>
                     <span className="article-card-arrow" aria-hidden="true">
                       <ArrowUpRight size={14} strokeWidth={1.8} />

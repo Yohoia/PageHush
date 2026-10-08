@@ -88,4 +88,4 @@ UnoCSS 也可实现既定样式，但当前方案优先采用博客已有的 Tai
 - 前端已使用 React Router、Motion、Tailwind CSS 与局部 SCSS/CSS 设计变量。
 - 测试体系包含 Vitest 单元测试、Playwright E2E、ESLint、Prettier、TypeScript 与生产构建检查。
 - E2E 已覆盖首页画廊、编辑器元信息、分类选择、标签添加、全屏写作、封面占位与本地图片预览。
-- 封面上传目前使用浏览器 Object URL 做即时预览；MinIO 持久化、引用关系与响应式资源生成仍未接入。
+- 封面上传已通过 Fastify 写入 MinIO 并在 PostgreSQL 登记 `assets`；响应式资源生成与发布快照仍未实现。

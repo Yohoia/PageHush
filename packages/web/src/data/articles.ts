@@ -182,7 +182,10 @@ export const articleStatusLabels: Record<ArticleStatus, string> = {
   trashed: '回收站',
 };
 
-export function getArticleDisplayStatus(article: Article): {
+export function getArticleDisplayStatus(article: {
+  status: ArticleStatus;
+  hasUnpublishedChanges?: boolean;
+}): {
   status: ArticleStatus | 'modified';
   label: string;
 } {

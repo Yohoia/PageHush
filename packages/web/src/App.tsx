@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { AppShell } from './components/AppShell';
+import { LoginPage } from './pages/LoginPage';
 import { LibraryPage } from './pages/LibraryPage';
 
 const EditorPage = lazy(async () => {
@@ -19,6 +20,7 @@ function EditorRouteFallback() {
 export function App() {
   return (
     <Routes>
+      <Route path="login" element={<LoginPage />} />
       <Route element={<AppShell />}>
         <Route index element={<LibraryPage />} />
         <Route
