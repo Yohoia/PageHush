@@ -1,0 +1,58 @@
+name: Mirror main to Codeup
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: mirror-main-to-codeup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare Codeup credentials
+        env:
+          CODEUP_USERNAME: ${{ secrets.CODEUP_USERNAME }}
+          CODEUP_PASSWORD: ${{ secrets.CODEUP_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$CODEUP_USERNAME" || -z "$CODEUP_PASSWORD" ]]; then
+              echo "Missing CODEUP_USERNAME or CODEUP_PASSWORD." >&2
+              exit 1
+          fi
+
+          askpass="$RUNNER_TEMP/git-askpass.sh"
+          cat > "$askpass" <<'SCRIPT'
+          #!/usr/bin/env bash
+          case "$1" in
+              Username*) printf '%s\n' "$CODEUP_USERNAME" ;;
+              *) printf '%s\n' "$CODEUP_PASSWORD" ;;
+          esac
+          SCRIPT
+          chmod 700 "$askpass"
+          echo "GIT_ASKPASS=$askpass" >> "$GITHUB_ENV"
+
+      - name: Push main to Codeup
+        env:
+          CODEUP_REMOTE_URL: https://codeup.aliyun.com/69aa892db28d0aba0f5ed47e/PageHush.git
+          GIT_TERMINAL_PROMPT: 0
+        run: |
+          set -euo pipefail
+          git remote remove codeup 2>/dev/null || true
+          git remote add codeup "$CODEUP_REMOTE_URL"
+          git -c credential.helper= push --force codeup HEAD:refs/heads/main
