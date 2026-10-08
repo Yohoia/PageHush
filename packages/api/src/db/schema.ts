@@ -1,7 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import {
   bigint,
-  boolean,
   index,
   integer,
   pgEnum,
@@ -12,12 +11,9 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-export const articleStatusEnum = pgEnum('article_status', [
-  'draft',
-  'scheduled',
-  'published',
-  'trashed',
-]);
+export const articleStatusEnum = pgEnum('article_status', ['draft', 'published']);
+
+export const articleLanguageEnum = pgEnum('article_language', ['zh', 'en']);
 
 export const articleFormatEnum = pgEnum('article_format', ['md', 'mdx']);
 
@@ -25,7 +21,7 @@ export const assetKindEnum = pgEnum('asset_kind', ['cover', 'inline_image', 'att
 
 export const assetStatusEnum = pgEnum('asset_status', ['uploading', 'ready', 'deleted']);
 
-export const categories = pgTable('categories', {
+export const topics = pgTable('topics', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -87,26 +83,29 @@ export const articles = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     slug: text('slug').notNull().unique(),
     title: text('title').notNull(),
-    excerpt: text('excerpt').notNull().default(''),
+    description: text('description').notNull().default(''),
     content: text('content').notNull().default(''),
     format: articleFormatEnum('format').notNull().default('md'),
     status: articleStatusEnum('status').notNull().default('draft'),
-    categoryId: uuid('category_id').references(() => categories.id, {
+    language: articleLanguageEnum('language').notNull().default('zh'),
+    author: text('author'),
+    topicId: uuid('topic_id').references(() => topics.id, {
       onDelete: 'set null',
     }),
     coverAssetId: uuid('cover_asset_id').references(() => assets.id, {
       onDelete: 'set null',
     }),
-    imageUrl: text('image_url'),
-    hasUnpublishedChanges: boolean('has_unpublished_changes').notNull().default(true),
-    publishedAt: timestamp('published_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    coverUrl: text('cover_url'),
+    coverAlt: text('cover_alt'),
+    publishedAt: timestamp('published_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    recordCreatedAt: timestamp('record_created_at', { withTimezone: true }).notNull().defaultNow(),
+    recordUpdatedAt: timestamp('record_updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [
     index('articles_status_idx').on(table.status),
-    index('articles_category_id_idx').on(table.categoryId),
+    index('articles_topic_id_idx').on(table.topicId),
     index('articles_published_at_idx').on(table.publishedAt),
   ],
 );
@@ -129,9 +128,9 @@ export const articleTags = pgTable(
 );
 
 export const articleRelations = relations(articles, ({ one, many }) => ({
-  category: one(categories, {
-    fields: [articles.categoryId],
-    references: [categories.id],
+  topic: one(topics, {
+    fields: [articles.topicId],
+    references: [topics.id],
   }),
   coverAsset: one(assets, {
     fields: [articles.coverAssetId],

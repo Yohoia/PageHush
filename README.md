@@ -11,20 +11,20 @@
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="./assets/readme/screenshots/home.png" width="100%" alt="PageHush 首页：文章画廊、分类筛选和文章数量"><br>
-      <sub>首页：四列文章画廊、分类筛选与动态计数</sub>
+      <img src="./assets/readme/screenshots/home.png" width="100%" alt="PageHush 首页：文章画廊、主题筛选和文章数量"><br>
+      <sub>首页：四列文章画廊、主题筛选与动态计数</sub>
     </td>
     <td width="50%" valign="top">
-      <img src="./assets/readme/screenshots/editor.png" width="100%" alt="PageHush 文章编辑页：分类、标题、封面、元信息和编辑器"><br>
-      <sub>文章详情：分类、标题、封面与编辑器</sub>
+      <img src="./assets/readme/screenshots/editor.png" width="100%" alt="PageHush 文章编辑页：主题、标题、封面、元信息和编辑器"><br>
+      <sub>文章详情：主题、标题、封面与编辑器</sub>
     </td>
   </tr>
 </table>
 
 ## 现在能做什么
 
-- **文章画廊**：浏览文章封面、分类、标签与状态；支持分类筛选、动态计数和滚动后新建入口。
-- **写作与编辑**：基于 Tiptap 官方 Simple Editor 编辑内容，支持分类、标签、标题、封面预览与全屏写作。
+- **文章画廊**：浏览文章封面、主题、标签与状态；支持主题筛选、动态计数和滚动后新建入口。
+- **写作与编辑**：基于 Tiptap 官方 Simple Editor 编辑内容，支持主题、标签、标题、封面预览与全屏写作。
 - **本地开发骨架**：npm workspaces 组织 `web`、`api`、`worker`、`shared`，并提供类型检查、Lint、单元测试和 E2E 测试脚本。
 - **访问认证**：单人访问码登录、数据库会话、HttpOnly Cookie 与 API 接口保护。
 
@@ -84,7 +84,7 @@ API 地址：<http://127.0.0.1:8787>，健康检查为 `/v1/health`。
 | Web 界面   | 可运行：首页画廊、文章编辑、封面占位与全屏写作        |
 | 编辑器     | 已接入 Tiptap Simple Editor 与 Markdown 扩展          |
 | API        | 骨架已就绪，业务数据接口尚未实现                      |
-| 数据持久化 | PostgreSQL 已接入，文章、分类、标签与资源记录可持久化 |
+| 数据持久化 | PostgreSQL 已接入，文章、主题、标签与资源记录可持久化 |
 | 对象存储   | MinIO 已接入，封面可上传到私有桶并通过 API 读回       |
 | 发布链路   | Astro 构建、内容包与 Nginx 切换尚未实现               |
 

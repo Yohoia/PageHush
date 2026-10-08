@@ -1,4 +1,4 @@
-export interface ApiCategory {
+export interface ApiTopic {
   id: string;
   name: string;
   articleCount: number;
@@ -14,21 +14,22 @@ export interface ApiArticle {
   id: string;
   slug: string;
   title: string;
-  excerpt: string;
+  description: string;
   content: string;
   format: 'md' | 'mdx';
-  status: 'draft' | 'scheduled' | 'published' | 'trashed';
-  category: string | null;
-  categoryId: string | null;
+  status: 'draft' | 'published';
+  language: 'zh' | 'en';
+  author: string | null;
+  topic: string | null;
+  topicId: string | null;
   tags: string[];
-  image: string | null;
+  cover: string | null;
   coverAssetId: string | null;
-  readingTime: string;
-  date: string;
-  publishedAt: string | null;
-  hasUnpublishedChanges: boolean;
-  createdAt: string;
-  updatedAt: string;
+  coverAlt: string | null;
+  publishedAt: string;
+  updatedAt: string | null;
+  recordCreatedAt: string;
+  recordUpdatedAt: string;
 }
 
 export interface ApiAsset {
@@ -51,13 +52,20 @@ export interface AuthSession {
 
 export interface ArticleSavePayload {
   title: string;
-  excerpt?: string;
+  slug?: string;
+  description?: string;
   content?: string;
   format?: 'md' | 'mdx';
-  status?: 'draft' | 'scheduled' | 'published' | 'trashed';
-  categoryName?: string;
-  categoryId?: string | null;
+  status?: 'draft' | 'published';
+  language?: 'zh' | 'en';
+  author?: string | null;
+  publishedAt?: string;
+  updatedAt?: string | null;
+  topicName?: string;
+  topicId?: string | null;
   coverAssetId?: string | null;
+  cover?: string | null;
+  coverAlt?: string | null;
   tagNames?: string[];
 }
 
@@ -118,8 +126,8 @@ export function listArticles() {
   return request<ApiArticle[]>('/v1/articles');
 }
 
-export function getArticle(id: string) {
-  return request<ApiArticle>(`/v1/articles/${id}`);
+export function getArticle(slug: string) {
+  return request<ApiArticle>(`/v1/articles/${slug}`);
 }
 
 export function createArticle(payload: ArticleSavePayload) {
@@ -129,27 +137,27 @@ export function createArticle(payload: ArticleSavePayload) {
   });
 }
 
-export function updateArticle(id: string, payload: ArticleSavePayload) {
-  return request<ApiArticle>(`/v1/articles/${id}`, {
+export function updateArticle(slug: string, payload: ArticleSavePayload) {
+  return request<ApiArticle>(`/v1/articles/${slug}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
 }
 
-export function listCategories() {
-  return request<ApiCategory[]>('/v1/categories');
+export function listTopics() {
+  return request<ApiTopic[]>('/v1/topics');
 }
 
-export function createCategory(name: string) {
-  return request<ApiCategory>('/v1/categories', {
+export function createTopic(name: string) {
+  return request<ApiTopic>('/v1/topics', {
     method: 'POST',
     body: JSON.stringify({ name }),
   });
 }
 
-export function deleteCategory(id: string, moveToCategoryId?: string) {
-  const query = moveToCategoryId ? `?moveToCategoryId=${encodeURIComponent(moveToCategoryId)}` : '';
-  return request<void>(`/v1/categories/${id}${query}`, { method: 'DELETE' });
+export function deleteTopic(id: string, moveToTopicId?: string) {
+  const query = moveToTopicId ? `?moveToTopicId=${encodeURIComponent(moveToTopicId)}` : '';
+  return request<void>(`/v1/topics/${id}${query}`, { method: 'DELETE' });
 }
 
 export function listTags() {

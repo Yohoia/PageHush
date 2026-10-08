@@ -18,7 +18,7 @@ import { MinIOStorage } from './storage/minio.js';
 import type { PageHushFastifyInstance } from './types/fastify.js';
 import { articleRoutes } from './routes/articles.js';
 import { assetRoutes } from './routes/assets.js';
-import { categoryRoutes } from './routes/categories.js';
+import { topicRoutes } from './routes/topics.js';
 import { tagRoutes } from './routes/tags.js';
 import { authRoutes, findValidSession } from './routes/auth.js';
 
@@ -156,7 +156,7 @@ export async function buildServer(options: BuildServerOptions = {}) {
   app.log.info({ bucket: storage.bucket }, 'MinIO bucket ready');
 
   await authRoutes(app);
-  await categoryRoutes(app);
+  await topicRoutes(app);
   await tagRoutes(app);
   await articleRoutes(app);
   await assetRoutes(app);

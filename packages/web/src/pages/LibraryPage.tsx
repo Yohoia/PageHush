@@ -3,11 +3,26 @@ import { Link, useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUpRight, Plus } from 'lucide-react';
 import {
-  articleCategories,
+  articleTopics,
   articles as fallbackArticles,
   getArticleDisplayStatus,
 } from '@/data/articles';
 import { listArticles, type ApiArticle } from '@/lib/api';
+
+function formatReadingTime(content: string) {
+  const normalized = content
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[#>*_`~\-[\]()!]/g, ' ')
+    .trim();
+  const cjk = normalized.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
+  const latinWords = normalized
+    .replace(/[\u4e00-\u9fff]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean).length;
+  const units = cjk + latinWords;
+
+  return `${Math.max(1, Math.ceil(units / 400))} 分钟阅读`;
+}
 
 function formatArticleDate(value: string) {
   const date = new Date(value);
@@ -22,8 +37,8 @@ export function LibraryPage() {
     fallbackArticles,
   );
   const [articlesLoading, setArticlesLoading] = useState(true);
-  const category = searchParams.get('category') ?? '全部';
-  const activeCategory = articleCategories.includes(category) ? category : '全部';
+  const topic = searchParams.get('topic') ?? '全部';
+  const activeTopic = articleTopics.includes(topic) ? topic : '全部';
 
   useEffect(() => {
     let cancelled = false;
@@ -49,10 +64,10 @@ export function LibraryPage() {
 
   const visibleArticles = useMemo(
     () =>
-      activeCategory === '全部'
+      activeTopic === '全部'
         ? articles
-        : articles.filter((article) => article.category === activeCategory),
-    [activeCategory],
+        : articles.filter((article) => article.topic === activeTopic),
+    [activeTopic],
   );
 
   useEffect(() => {
@@ -63,8 +78,8 @@ export function LibraryPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const selectCategory = (nextCategory: string) => {
-    setSearchParams(nextCategory === '全部' ? {} : { category: nextCategory });
+  const selectTopic = (nextTopic: string) => {
+    setSearchParams(nextTopic === '全部' ? {} : { topic: nextTopic });
   };
 
   return (
@@ -81,17 +96,17 @@ export function LibraryPage() {
           篇文章
         </p>
 
-        <div className="article-category-filters" role="group" aria-label="分类筛选">
-          {articleCategories.map((item) => {
-            const active = item === activeCategory;
+        <div className="article-topic-filters" role="group" aria-label="主题筛选">
+          {articleTopics.map((item) => {
+            const active = item === activeTopic;
 
             return (
               <button
                 key={item}
                 type="button"
-                className="article-category-filter"
+                className="article-topic-filter"
                 aria-pressed={active}
-                onClick={() => selectCategory(item)}
+                onClick={() => selectTopic(item)}
               >
                 {item}
               </button>
@@ -104,7 +119,7 @@ export function LibraryPage() {
         <AnimatePresence initial={true} mode="popLayout">
           {visibleArticles.map((article, index) => (
             <motion.div
-              key={article.id}
+              key={article.slug}
               className="article-card-cell"
               layout="position"
               initial={{ opacity: 0, y: 20 }}
@@ -117,7 +132,7 @@ export function LibraryPage() {
               }}
             >
               <Link
-                to={`/articles/${'slug' in article && article.slug ? article.slug : article.id}`}
+                to={`/articles/${article.slug}`}
                 className="article-card-link"
                 aria-label={`进入文章：${article.title}`}
               >
@@ -128,13 +143,13 @@ export function LibraryPage() {
                 >
                   <img
                     className="article-card-media"
-                    src={article.image ?? undefined}
+                    src={article.cover ?? undefined}
                     alt=""
                     loading="lazy"
                     decoding="async"
                   />
                   <div className="article-card-meta">
-                    <span className="article-card-category">{article.category}</span>
+                    <span className="article-card-topic">{article.topic}</span>
                     <span
                       className="article-card-status"
                       data-status={getArticleDisplayStatus(article).status}
@@ -143,7 +158,7 @@ export function LibraryPage() {
                     </span>
                   </div>
                   <h2 className="article-card-title">{article.title}</h2>
-                  <p className="article-card-excerpt">{article.excerpt}</p>
+                  <p className="article-card-description">{article.description}</p>
                   <div className="article-card-tags">
                     {article.tags.map((tag) => (
                       <span key={tag}>#{tag}</span>
@@ -152,7 +167,8 @@ export function LibraryPage() {
                   <div className="article-card-spacer" aria-hidden="true" />
                   <div className="article-card-foot">
                     <span>
-                      {formatArticleDate(article.date)} · {article.readingTime}
+                      {formatArticleDate(article.publishedAt)} ·{' '}
+                      {formatReadingTime(article.content)}
                     </span>
                     <span className="article-card-arrow" aria-hidden="true">
                       <ArrowUpRight size={14} strokeWidth={1.8} />

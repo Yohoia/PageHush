@@ -1,69 +1,76 @@
 import type { Database } from '../db/client.js';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Static } from 'typebox';
 import type { PageHushFastifyInstance } from '../types/fastify.js';
 import { and, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
-import { assets, articles, articleTags, categories, tags } from '../db/schema.js';
+import { assets, articles, articleTags, tags, topics } from '../db/schema.js';
 import { createArticleBodySchema, updateArticleBodySchema } from './schemas.js';
-
-type ArticleListRequest = FastifyRequest<{
-  Querystring: { status?: string; categoryId?: string; tagId?: string; q?: string };
-}>;
-type ArticleIdRequest = FastifyRequest<{ Params: { id: string } }>;
-type CreateArticleRequest = FastifyRequest<{ Body: Static<typeof createArticleBodySchema> }>;
-type UpdateArticleRequest = FastifyRequest<{
-  Params: { id: string };
-  Body: Static<typeof updateArticleBodySchema>;
-}>;
 import { isUniqueConstraintError, normalizeName, slugify, uniqueSlugSuffix } from './utils.js';
 
+type ArticleListRequest = FastifyRequest<{
+  Querystring: { status?: string; topicId?: string; tagId?: string; q?: string };
+}>;
+type ArticleSlugRequest = FastifyRequest<{ Params: { slug: string } }>;
+type CreateArticleRequest = FastifyRequest<{ Body: Static<typeof createArticleBodySchema> }>;
+type UpdateArticleRequest = FastifyRequest<{
+  Params: { slug: string };
+  Body: Static<typeof updateArticleBodySchema>;
+}>;
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+class ArticleValidationError extends Error {
+  constructor(
+    readonly code:
+      | 'topic_not_found'
+      | 'description_required_for_published'
+      | 'slug_immutable_for_published'
+      | 'invalid_published_at'
+      | 'invalid_updated_at'
+      | 'updated_at_before_published_at',
+  ) {
+    super(code);
+  }
+}
 
 function isUuid(value: string) {
   return UUID_PATTERN.test(value);
 }
 
+function parseDate(value: string, code: 'invalid_published_at' | 'invalid_updated_at') {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new ArticleValidationError(code);
+  return date;
+}
+
 type ArticleRow = typeof articles.$inferSelect;
 type TagRow = { id: string; name: string };
 
-function estimatedReadingTime(content: string) {
-  const normalized = content
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/[#>*_`~\-[\] ()!]/g, ' ')
-    .trim();
-  const cjk = normalized.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
-  const latinWords = normalized
-    .replace(/[\u4e00-\u9fff]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean).length;
-  const words = cjk + latinWords;
-  return `${Math.max(1, Math.ceil(words / 400))} 分钟阅读`;
+function articleCoverUrl(row: Pick<ArticleRow, 'coverAssetId' | 'coverUrl'>) {
+  return row.coverAssetId ? `/v1/assets/${row.coverAssetId}/content` : row.coverUrl;
 }
 
-function articleImageUrl(row: Pick<ArticleRow, 'coverAssetId' | 'imageUrl'>) {
-  return row.coverAssetId ? `/v1/assets/${row.coverAssetId}/content` : row.imageUrl;
-}
-
-function publicArticle(row: ArticleRow, categoryName: string | null, tagNames: string[]) {
+function publicArticle(row: ArticleRow, topicName: string | null, tagNames: string[]) {
   return {
     id: row.id,
     slug: row.slug,
     title: row.title,
-    excerpt: row.excerpt,
+    description: row.description,
     content: row.content,
     format: row.format,
     status: row.status,
-    category: categoryName,
-    categoryId: row.categoryId,
+    language: row.language,
+    author: row.author,
+    topic: topicName,
+    topicId: row.topicId,
     tags: tagNames,
-    image: articleImageUrl(row),
+    cover: articleCoverUrl(row),
     coverAssetId: row.coverAssetId,
-    readingTime: estimatedReadingTime(row.content),
-    date: row.publishedAt?.toISOString() ?? row.createdAt.toISOString(),
-    publishedAt: row.publishedAt?.toISOString() ?? null,
-    hasUnpublishedChanges: row.hasUnpublishedChanges,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    coverAlt: row.coverAlt,
+    publishedAt: row.publishedAt.toISOString(),
+    updatedAt: row.updatedAt?.toISOString() ?? null,
+    recordCreatedAt: row.recordCreatedAt.toISOString(),
+    recordUpdatedAt: row.recordUpdatedAt.toISOString(),
   };
 }
 
@@ -82,28 +89,28 @@ function normalizeTagNames(values: string[]) {
   return result;
 }
 
-async function ensureCategory(db: Database, categoryId?: string | null, categoryName?: string) {
-  if (categoryId) {
-    const [category] = await db
-      .select({ id: categories.id, name: categories.name })
-      .from(categories)
-      .where(eq(categories.id, categoryId));
+async function ensureTopic(db: Database, topicId?: string | null, topicName?: string) {
+  if (topicId) {
+    const [topic] = await db
+      .select({ id: topics.id, name: topics.name })
+      .from(topics)
+      .where(eq(topics.id, topicId));
 
-    if (!category) throw new Error('category_not_found');
-    return category;
+    if (!topic) throw new ArticleValidationError('topic_not_found');
+    return topic;
   }
 
-  const name = normalizeName(categoryName ?? '');
+  const name = normalizeName(topicName ?? '');
   if (!name) return null;
 
   const [existing] = await db
-    .select({ id: categories.id, name: categories.name })
-    .from(categories)
-    .where(sql`lower(${categories.name}) = ${name.toLowerCase()}`);
+    .select({ id: topics.id, name: topics.name })
+    .from(topics)
+    .where(sql`lower(${topics.name}) = ${name.toLowerCase()}`);
 
   if (existing) return existing;
 
-  const [created] = await db.insert(categories).values({ name }).returning();
+  const [created] = await db.insert(topics).values({ name }).returning();
   return { id: created.id, name: created.name };
 }
 
@@ -148,14 +155,9 @@ async function generateUniqueSlug(db: Database, desired: string, excludeId?: str
   return `${slugify(desired, 'article')}-${Date.now()}`;
 }
 
-async function categoryMapForArticles(db: Database, articleIds: string[]) {
-  const map = new Map<string, string>();
-  if (!articleIds.length) return map;
-
-  const rows = await db.select({ id: categories.id, name: categories.name }).from(categories);
-  for (const row of rows) map.set(row.id, row.name);
-
-  return map;
+async function topicMapForArticles(db: Database) {
+  const rows = await db.select({ id: topics.id, name: topics.name }).from(topics);
+  return new Map(rows.map((row) => [row.id, row.name]));
 }
 
 async function tagsForArticles(db: Database, articleIds: string[]) {
@@ -177,22 +179,36 @@ async function tagsForArticles(db: Database, articleIds: string[]) {
   return map;
 }
 
+function articleIdentifier(value: string) {
+  return isUuid(value) ? eq(articles.id, value) : eq(articles.slug, value);
+}
+
+async function topicNameForArticle(db: Database, topicId: string | null) {
+  if (!topicId) return null;
+  const [topic] = await db.select({ name: topics.name }).from(topics).where(eq(topics.id, topicId));
+  return topic?.name ?? null;
+}
+
+function sendArticleValidationError(reply: FastifyReply, error: unknown) {
+  if (!(error instanceof ArticleValidationError)) return false;
+  return reply.status(400).send({ error: error.code });
+}
+
 export async function articleRoutes(app: PageHushFastifyInstance) {
   app.get('/v1/articles', async (request: ArticleListRequest, reply) => {
     if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
 
     const query = request.query;
-
     const conditions = [isNull(articles.deletedAt)];
     if (query.status) conditions.push(eq(articles.status, query.status as ArticleRow['status']));
-    if (query.categoryId) conditions.push(eq(articles.categoryId, query.categoryId));
+    if (query.topicId) conditions.push(eq(articles.topicId, query.topicId));
     if (query.q) conditions.push(ilike(articles.title, `%${query.q}%`));
 
     const rows = await app.database
       .select()
       .from(articles)
       .where(and(...conditions))
-      .orderBy(desc(articles.updatedAt));
+      .orderBy(desc(articles.recordUpdatedAt));
 
     let filteredRows = rows;
     if (query.tagId) {
@@ -207,47 +223,26 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
       filteredRows = rows.filter((row) => taggedIds.has(row.id));
     }
 
-    const categoryNames = await categoryMapForArticles(
-      app.database,
-      filteredRows.map((row) => row.id),
-    );
+    const topicNames = await topicMapForArticles(app.database);
     const tagNames = await tagsForArticles(
       app.database,
       filteredRows.map((row) => row.id),
     );
 
     return filteredRows.map((row) =>
-      publicArticle(
-        row,
-        categoryNames.get(row.categoryId ?? '') ?? null,
-        tagNames.get(row.id) ?? [],
-      ),
+      publicArticle(row, topicNames.get(row.topicId ?? '') ?? null, tagNames.get(row.id) ?? []),
     );
   });
 
-  app.get('/v1/articles/:id', async (request: ArticleIdRequest, reply) => {
+  app.get('/v1/articles/:slug', async (request: ArticleSlugRequest, reply) => {
     if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
 
     const [row] = await app.database
       .select()
       .from(articles)
-      .where(
-        and(
-          isUuid(request.params.id)
-            ? eq(articles.id, request.params.id)
-            : eq(articles.slug, request.params.id),
-          isNull(articles.deletedAt),
-        ),
-      );
+      .where(and(articleIdentifier(request.params.slug), isNull(articles.deletedAt)));
 
     if (!row) return reply.status(404).send({ error: 'article_not_found' });
-
-    const [category] = row.categoryId
-      ? await app.database
-          .select({ name: categories.name })
-          .from(categories)
-          .where(eq(categories.id, row.categoryId))
-      : [];
 
     const tagRows = await app.database
       .select({ name: tags.name })
@@ -257,7 +252,7 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
 
     return publicArticle(
       row,
-      category?.name ?? null,
+      await topicNameForArticle(app.database, row.topicId),
       tagRows.map((row) => row.name).sort((a, b) => a.localeCompare(b, 'zh-CN')),
     );
   });
@@ -270,27 +265,43 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
 
       const body = request.body;
       const title = body.title.trim();
+      const description = body.description ?? '';
+
+      if (body.status === 'published' && !description.trim()) {
+        return reply.status(400).send({ error: 'description_required_for_published' });
+      }
 
       try {
         const article = await app.database.transaction(async (tx) => {
-          const category = await ensureCategory(tx, body.categoryId, body.categoryName);
+          const topic = await ensureTopic(tx, body.topicId, body.topicName);
           const slug = await generateUniqueSlug(tx, body.slug || title);
-          const publishedAt = body.status === 'published' ? new Date() : null;
+          const publishedAt = body.publishedAt
+            ? parseDate(body.publishedAt, 'invalid_published_at')
+            : new Date();
+          const updatedAt = body.updatedAt ? parseDate(body.updatedAt, 'invalid_updated_at') : null;
+
+          if (updatedAt && updatedAt < publishedAt) {
+            throw new ArticleValidationError('updated_at_before_published_at');
+          }
 
           const [row] = await tx
             .insert(articles)
             .values({
               slug,
               title,
-              excerpt: body.excerpt ?? '',
+              description,
               content: body.content ?? '',
               format: body.format ?? 'md',
               status: body.status ?? 'draft',
-              categoryId: category?.id ?? null,
+              language: body.language ?? 'zh',
+              author: body.author || null,
+              topicId: topic?.id ?? null,
               coverAssetId: body.coverAssetId || null,
-              imageUrl: body.imageUrl || null,
+              coverUrl: body.cover || null,
+              coverAlt: body.coverAlt || null,
               publishedAt,
-              hasUnpublishedChanges: true,
+              updatedAt,
+              recordUpdatedAt: new Date(),
             })
             .returning();
 
@@ -302,14 +313,12 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
           }
 
           const tagNames = await replaceArticleTags(tx, row.id, body.tagNames ?? []);
-          return publicArticle(row, category?.name ?? null, tagNames);
+          return publicArticle(row, topic?.name ?? null, tagNames);
         });
 
         return reply.status(201).send(article);
       } catch (error) {
-        if (error instanceof Error && error.message === 'category_not_found') {
-          return reply.status(400).send({ error: 'category_not_found' });
-        }
+        if (sendArticleValidationError(reply, error)) return reply;
         if (isUniqueConstraintError(error)) {
           return reply.status(409).send({ error: 'slug_already_exists' });
         }
@@ -319,7 +328,7 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
   );
 
   app.patch(
-    '/v1/articles/:id',
+    '/v1/articles/:slug',
     { schema: { body: updateArticleBodySchema } },
     async (request: UpdateArticleRequest, reply) => {
       if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
@@ -330,45 +339,80 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
           const [current] = await tx
             .select()
             .from(articles)
-            .where(and(eq(articles.id, request.params.id), isNull(articles.deletedAt)));
+            .where(and(articleIdentifier(request.params.slug), isNull(articles.deletedAt)));
 
           if (!current) return null;
 
-          const category =
-            body.categoryId !== undefined || body.categoryName !== undefined
-              ? await ensureCategory(tx, body.categoryId, body.categoryName)
+          if (
+            body.slug !== undefined &&
+            current.status === 'published' &&
+            body.slug !== current.slug
+          ) {
+            throw new ArticleValidationError('slug_immutable_for_published');
+          }
+
+          const topic =
+            body.topicId !== undefined || body.topicName !== undefined
+              ? await ensureTopic(tx, body.topicId, body.topicName)
               : null;
 
-          const updates: Partial<ArticleRow> = {
-            updatedAt: new Date(),
-            hasUnpublishedChanges: true,
-          };
+          const nextDescription = body.description ?? current.description;
+          if (body.status === 'published' && !nextDescription.trim()) {
+            throw new ArticleValidationError('description_required_for_published');
+          }
 
+          const updates: Partial<ArticleRow> = { recordUpdatedAt: new Date() };
           if (body.title !== undefined) updates.title = body.title.trim();
-          if (body.excerpt !== undefined) updates.excerpt = body.excerpt;
+          if (body.description !== undefined) updates.description = body.description;
           if (body.content !== undefined) updates.content = body.content;
           if (body.format !== undefined) updates.format = body.format;
           if (body.status !== undefined) updates.status = body.status;
-          if (category) updates.categoryId = category.id;
-          if (body.categoryId === null) updates.categoryId = null;
-          if (body.imageUrl !== undefined) updates.imageUrl = body.imageUrl || null;
+          if (body.language !== undefined) updates.language = body.language;
+          if (body.author !== undefined) updates.author = body.author || null;
+          if (topic) updates.topicId = topic.id;
+          if (body.topicId === null) updates.topicId = null;
+          if (body.coverAssetId !== undefined) updates.coverAssetId = body.coverAssetId || null;
+          if (body.cover !== undefined) updates.coverUrl = body.cover || null;
+          if (body.coverAlt !== undefined) updates.coverAlt = body.coverAlt || null;
 
           if (body.slug !== undefined) {
             updates.slug = await generateUniqueSlug(tx, body.slug, current.id);
           }
 
-          if (body.coverAssetId !== undefined) {
-            updates.coverAssetId = body.coverAssetId || null;
-            if (body.coverAssetId) {
-              await tx
-                .update(assets)
-                .set({ kind: 'cover', updatedAt: new Date() })
-                .where(eq(assets.id, body.coverAssetId));
-            }
+          if (body.publishedAt !== undefined) {
+            updates.publishedAt = parseDate(body.publishedAt, 'invalid_published_at');
           }
 
-          if (body.status === 'published' && current.status !== 'published') {
-            updates.publishedAt = new Date();
+          const explicitUpdatedAt =
+            body.updatedAt === undefined
+              ? undefined
+              : body.updatedAt === null
+                ? null
+                : parseDate(body.updatedAt, 'invalid_updated_at');
+
+          const nextPublishedAt = updates.publishedAt ?? current.publishedAt;
+          if (explicitUpdatedAt && explicitUpdatedAt < nextPublishedAt) {
+            throw new ArticleValidationError('updated_at_before_published_at');
+          }
+
+          const contentFieldsChanged =
+            [
+              'title',
+              'description',
+              'content',
+              'format',
+              'language',
+              'author',
+              'topicId',
+              'coverAssetId',
+              'coverUrl',
+              'coverAlt',
+            ].some((field) => field in updates) || body.tagNames !== undefined;
+
+          if (explicitUpdatedAt !== undefined) {
+            updates.updatedAt = explicitUpdatedAt;
+          } else if (contentFieldsChanged) {
+            updates.updatedAt = new Date();
           }
 
           const [row] = await tx
@@ -376,6 +420,13 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
             .set(updates)
             .where(eq(articles.id, current.id))
             .returning();
+
+          if (body.coverAssetId) {
+            await tx
+              .update(assets)
+              .set({ kind: 'cover', updatedAt: new Date() })
+              .where(eq(assets.id, body.coverAssetId));
+          }
 
           const tagNames =
             body.tagNames === undefined
@@ -388,24 +439,13 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
                 ).map((row) => row.name)
               : await replaceArticleTags(tx, current.id, body.tagNames);
 
-          const categoryName = row.categoryId
-            ? ((
-                await tx
-                  .select({ name: categories.name })
-                  .from(categories)
-                  .where(eq(categories.id, row.categoryId))
-              )[0]?.name ?? null)
-            : null;
-
-          return publicArticle(row, categoryName, tagNames);
+          return publicArticle(row, await topicNameForArticle(tx, row.topicId), tagNames);
         });
 
         if (!article) return reply.status(404).send({ error: 'article_not_found' });
         return article;
       } catch (error) {
-        if (error instanceof Error && error.message === 'category_not_found') {
-          return reply.status(400).send({ error: 'category_not_found' });
-        }
+        if (sendArticleValidationError(reply, error)) return reply;
         if (isUniqueConstraintError(error)) {
           return reply.status(409).send({ error: 'slug_already_exists' });
         }
@@ -414,17 +454,13 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
     },
   );
 
-  app.delete('/v1/articles/:id', async (request: ArticleIdRequest, reply) => {
+  app.delete('/v1/articles/:slug', async (request: ArticleSlugRequest, reply) => {
     if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
 
     await app.database
       .update(articles)
-      .set({
-        status: 'trashed',
-        deletedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(articles.id, request.params.id), isNull(articles.deletedAt)));
+      .set({ deletedAt: new Date(), recordUpdatedAt: new Date() })
+      .where(and(articleIdentifier(request.params.slug), isNull(articles.deletedAt)));
 
     return reply.status(204).send();
   });

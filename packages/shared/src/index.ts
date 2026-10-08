@@ -11,16 +11,14 @@ export const healthResponseSchema = Type.Object({
 export type HealthResponse = Static<typeof healthResponseSchema>;
 
 export const articleFormats = ['md', 'mdx'] as const;
+export const articleLanguages = ['zh', 'en'] as const;
 export const articleFormatSchema = Type.Union([Type.Literal('md'), Type.Literal('mdx')]);
 export type ArticleFormat = Static<typeof articleFormatSchema>;
+export const articleLanguageSchema = Type.Union([Type.Literal('zh'), Type.Literal('en')]);
+export type ArticleLanguage = Static<typeof articleLanguageSchema>;
 
-export const articleStatuses = ['draft', 'scheduled', 'published', 'trashed'] as const;
-export const articleStatusSchema = Type.Union([
-  Type.Literal('draft'),
-  Type.Literal('scheduled'),
-  Type.Literal('published'),
-  Type.Literal('trashed'),
-]);
+export const articleStatuses = ['draft', 'published'] as const;
+export const articleStatusSchema = Type.Union([Type.Literal('draft'), Type.Literal('published')]);
 export type ArticleStatus = Static<typeof articleStatusSchema>;
 
 export const applicationStageSchema = Type.Object({

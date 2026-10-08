@@ -1,15 +1,9 @@
 import { Pool, type PoolClient } from 'pg';
 import { articles } from '../packages/web/src/data/articles.ts';
 
-type Article = (typeof articles)[number];
-
-function databaseStatus(status: Article['status']) {
-  return status === 'published' ? 'published' : 'draft';
-}
-
 async function ensureId(
   client: PoolClient,
-  table: 'categories' | 'tags',
+  table: 'topics' | 'tags',
   name: string,
 ): Promise<string> {
   const result = await client.query<{ id: string }>(
@@ -37,41 +31,46 @@ async function main() {
     await client.query('begin');
 
     for (const article of articles) {
-      const categoryId = await ensureId(client, 'categories', article.category);
+      const topicId = await ensureId(client, 'topics', article.topic);
       const tagIds: string[] = [];
       for (const tag of article.tags) {
         tagIds.push(await ensureId(client, 'tags', tag));
       }
-      const status = databaseStatus(article.status);
-      const publishedAt = status === 'published' ? article.publishedAt : null;
 
       const inserted = await client.query<{ id: string }>(
         `insert into articles (
-          slug, title, excerpt, content, format, status, category_id,
-          image_url, has_unpublished_changes, published_at
+          slug, title, description, content, format, status, language, author,
+          topic_id, cover_url, published_at
         )
-        values ($1, $2, $3, $4, 'md', $5, $6, $7, $8, $9::timestamptz)
+        values (
+          $1, $2, $3, $4, $5, $6, $7, $8,
+          $9, $10, $11::timestamptz
+        )
         on conflict (slug) do update set
           title = excluded.title,
-          excerpt = excluded.excerpt,
+          description = excluded.description,
           content = excluded.content,
+          format = excluded.format,
           status = excluded.status,
-          category_id = excluded.category_id,
-          image_url = excluded.image_url,
-          has_unpublished_changes = excluded.has_unpublished_changes,
+          language = excluded.language,
+          author = excluded.author,
+          topic_id = excluded.topic_id,
+          cover_url = excluded.cover_url,
           published_at = excluded.published_at,
-          updated_at = now()
+          record_updated_at = now()
         returning id`,
         [
-          article.id,
+          article.slug,
           article.title,
-          article.excerpt,
-          article.markdown,
-          status,
-          categoryId,
-          article.image,
-          article.status === 'modified',
-          publishedAt,
+          article.description,
+          article.content,
+          article.format,
+          article.status,
+          article.language,
+          article.author,
+          topicId,
+          article.cover,
+          article.publishedAt,
         ],
       );
 

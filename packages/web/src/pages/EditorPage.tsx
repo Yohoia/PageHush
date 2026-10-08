@@ -12,12 +12,7 @@ import type { Editor } from '@tiptap/react';
 import { ArrowLeft, ChevronDown, Images, Maximize, Minimize, Plus, X } from 'lucide-react';
 import { EditorLayout } from '@/components/EditorLayout';
 import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
-import {
-  articleCategories,
-  articles,
-  defaultArticleMarkdown,
-  MAX_ARTICLE_TAGS,
-} from '@/data/articles';
+import { articleTopics, articles, defaultArticleContent, MAX_ARTICLE_TAGS } from '@/data/articles';
 import { useNavigate, useParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { editorLayoutTransition } from '../motionPresets';
@@ -25,16 +20,16 @@ import {
   ApiError,
   type ApiArticle,
   createArticle,
-  deleteCategory as deleteCategoryRequest,
+  deleteTopic as deleteTopicRequest,
   getArticle,
-  listCategories,
+  listTopics,
   updateArticle,
   uploadCover,
 } from '@/lib/api';
 
 const newArticle = {
   title: '把日子，写慢一点',
-  category: '随笔',
+  topic: '随笔',
   publishedAt: '2026-10-06',
   tags: ['写作', 'Markdown'],
 };
@@ -60,58 +55,55 @@ function normalizeTaxonomyValue(value: string): string {
 const MAX_COVER_FILE_SIZE = 5 * 1024 * 1024;
 
 export function EditorPage() {
-  const { articleId } = useParams();
+  const { articleSlug } = useParams();
   const navigate = useNavigate();
   const selectedArticle = useMemo(
-    () => articles.find((article) => article.id === articleId),
-    [articleId],
+    () => articles.find((article) => article.slug === articleSlug),
+    [articleSlug],
   );
   const article = selectedArticle ?? newArticle;
-  const fallbackMarkdown = selectedArticle?.markdown ?? defaultArticleMarkdown;
+  const fallbackContent = selectedArticle?.content ?? defaultArticleContent;
   const coverInputId = useId();
 
   const [remoteArticle, setRemoteArticle] = useState<ApiArticle | null>(null);
   const [articleLoading, setArticleLoading] = useState(Boolean(selectedArticle));
   const [articleError, setArticleError] = useState<string | null>(null);
-  const [editorContent, setEditorContent] = useState(fallbackMarkdown);
+  const [editorContent, setEditorContent] = useState(fallbackContent);
   const [editorContentVersion, setEditorContentVersion] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
 
-  const [coverImage, setCoverImage] = useState<string | null>(selectedArticle?.image ?? null);
+  const [cover, setCover] = useState<string | null>(selectedArticle?.cover ?? null);
   const [coverAssetId, setCoverAssetId] = useState<string | null>(null);
   const [coverObjectUrl, setCoverObjectUrl] = useState<string | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
 
   const [title, setTitle] = useState(article.title);
-  const [category, setCategory] = useState(article.category);
+  const [topic, setTopic] = useState(article.topic);
   const [tags, setTags] = useState(article.tags);
-  const [characterCount, setCharacterCount] = useState(() => countWords(fallbackMarkdown));
-  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
-  const [categoryQuery, setCategoryQuery] = useState('');
+  const [characterCount, setCharacterCount] = useState(() => countWords(fallbackContent));
+  const [isTopicMenuOpen, setIsTopicMenuOpen] = useState(false);
+  const [topicQuery, setTopicQuery] = useState('');
   const [isTagInputVisible, setIsTagInputVisible] = useState(false);
   const [tagQuery, setTagQuery] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const [categoryOptions, setCategoryOptions] = useState(() =>
-    articleCategories
+  const [topicOptions, setTopicOptions] = useState(() =>
+    articleTopics
       .filter((item) => item !== '全部')
       .map((name) => ({ id: undefined as string | undefined, name })),
   );
 
-  const editorCategories = useMemo(
-    () => categoryOptions.map((item) => item.name),
-    [categoryOptions],
-  );
+  const editorTopics = useMemo(() => topicOptions.map((item) => item.name), [topicOptions]);
 
-  const availableCategories = useMemo(() => {
-    const query = categoryQuery.trim();
-    return query ? editorCategories.filter((item) => item.includes(query)) : editorCategories;
-  }, [categoryQuery, editorCategories]);
+  const availableTopics = useMemo(() => {
+    const query = topicQuery.trim();
+    return query ? editorTopics.filter((item) => item.includes(query)) : editorTopics;
+  }, [topicQuery, editorTopics]);
 
-  const categoryButtonRef = useRef<HTMLButtonElement>(null);
-  const categoryMenuRef = useRef<HTMLDivElement>(null);
+  const topicButtonRef = useRef<HTMLButtonElement>(null);
+  const topicMenuRef = useRef<HTMLDivElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -143,24 +135,24 @@ export function EditorPage() {
   }, [resizeTitleInput]);
 
   useEffect(() => {
-    if (!articleId) return;
+    if (!articleSlug) return;
 
     let cancelled = false;
     setArticleLoading(true);
     setArticleError(null);
 
-    getArticle(articleId)
+    getArticle(articleSlug)
       .then((data) => {
         if (cancelled) return;
 
         setRemoteArticle(data);
         setTitle(data.title);
-        setCategory(data.category ?? '');
+        setTopic(data.topic ?? '');
         setTags(data.tags);
         setCharacterCount(countWords(data.content));
         setEditorContent(data.content);
         setEditorContentVersion((version) => version + 1);
-        setCoverImage(data.image);
+        setCover(data.cover);
         setCoverAssetId(data.coverAssetId);
       })
       .catch((_error: unknown) => {
@@ -175,19 +167,19 @@ export function EditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [articleId]);
+  }, [articleSlug]);
 
   useEffect(() => {
     let cancelled = false;
     setArticleError(null);
 
-    listCategories()
+    listTopics()
       .then((data) => {
         if (cancelled) return;
-        setCategoryOptions(data.map((category) => ({ id: category.id, name: category.name })));
+        setTopicOptions(data.map((topic) => ({ id: topic.id, name: topic.name })));
       })
       .catch(() => {
-        // API 不可用时保留本地分类作为离线兜底。
+        // API 不可用时保留本地主题作为离线兜底。
       });
 
     return () => {
@@ -198,10 +190,10 @@ export function EditorPage() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        !categoryMenuRef.current?.contains(event.target as Node) &&
-        !categoryButtonRef.current?.contains(event.target as Node)
+        !topicMenuRef.current?.contains(event.target as Node) &&
+        !topicButtonRef.current?.contains(event.target as Node)
       ) {
-        setIsCategoryMenuOpen(false);
+        setIsTopicMenuOpen(false);
       }
     };
 
@@ -213,9 +205,9 @@ export function EditorPage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
 
-      if (isCategoryMenuOpen) {
-        setIsCategoryMenuOpen(false);
-        categoryButtonRef.current?.focus();
+      if (isTopicMenuOpen) {
+        setIsTopicMenuOpen(false);
+        topicButtonRef.current?.focus();
       }
 
       if (isTagInputVisible) {
@@ -229,7 +221,7 @@ export function EditorPage() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isCategoryMenuOpen, isFullscreen, isTagInputVisible]);
+  }, [isTopicMenuOpen, isFullscreen, isTagInputVisible]);
 
   useEffect(() => {
     if (isTagInputVisible) {
@@ -266,7 +258,7 @@ export function EditorPage() {
 
     try {
       const asset = await uploadCover(file);
-      setCoverImage(asset.url);
+      setCover(asset.url);
       setCoverAssetId(asset.id);
     } catch (error) {
       const isValidationError = error instanceof ApiError && [400, 413, 415].includes(error.status);
@@ -274,7 +266,7 @@ export function EditorPage() {
       if (!isValidationError) {
         // API / MinIO 不可用时继续使用本地预览，保证编辑不中断。
         const nextObjectUrl = URL.createObjectURL(file);
-        setCoverImage(nextObjectUrl);
+        setCover(nextObjectUrl);
         setCoverObjectUrl(nextObjectUrl);
       } else {
         setCoverError(error instanceof Error ? error.message : '封面上传失败');
@@ -303,39 +295,48 @@ export function EditorPage() {
 
       const payload = {
         title: title.trim() || '无标题',
-        excerpt: '',
+        description: (
+          editor
+            .getText()
+            .split(/\n{2,}/)
+            .map((block) => block.trim())
+            .find(Boolean) ?? ''
+        ).slice(0, 500),
         content,
         format: 'md' as const,
         status: 'draft' as const,
-        categoryName: category,
+        language: remoteArticle?.language ?? ('zh' as const),
+        author: remoteArticle?.author ?? 'Yohoia',
+        topicName: topic,
         coverAssetId: coverAssetId || null,
+        coverAlt: remoteArticle?.coverAlt ?? null,
         tagNames: tags,
       };
 
       const saved = remoteArticle
-        ? await updateArticle(remoteArticle.id, payload)
+        ? await updateArticle(remoteArticle.slug, payload)
         : await createArticle(payload);
 
       setRemoteArticle(saved);
       setTitle(saved.title);
-      setCategory(saved.category ?? category);
+      setTopic(saved.topic ?? topic);
       setTags(saved.tags);
-      setCoverImage(saved.image);
+      setCover(saved.cover);
       setCoverAssetId(saved.coverAssetId);
       setSaveState('saved');
 
       if (!remoteArticle) {
-        navigate(`/articles/${saved.id}`, { replace: true });
+        navigate(`/articles/${saved.slug}`, { replace: true });
       }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : '保存失败');
     } finally {
       setIsSaving(false);
     }
-  }, [articleLoading, category, coverAssetId, isSaving, navigate, remoteArticle, tags, title]);
+  }, [articleLoading, topic, coverAssetId, isSaving, navigate, remoteArticle, tags, title]);
 
   const toggleFullscreen = () => {
-    setIsCategoryMenuOpen(false);
+    setIsTopicMenuOpen(false);
     setIsTagInputVisible(false);
     setIsFullscreen((current) => !current);
   };
@@ -349,32 +350,32 @@ export function EditorPage() {
     navigate('/');
   };
 
-  const selectCategory = (nextCategory: string) => {
-    const value = normalizeTaxonomyValue(nextCategory);
+  const selectTopic = (nextTopic: string) => {
+    const value = normalizeTaxonomyValue(nextTopic);
     if (!value) return;
 
-    setCategory(value);
-    setIsCategoryMenuOpen(false);
-    setCategoryQuery('');
+    setTopic(value);
+    setIsTopicMenuOpen(false);
+    setTopicQuery('');
   };
 
-  const deleteCategory = async (nextCategory: string) => {
-    if (editorCategories.length <= 1) return;
+  const deleteTopic = async (nextTopic: string) => {
+    if (editorTopics.length <= 1) return;
 
-    const option = categoryOptions.find((item) => item.name === nextCategory);
+    const option = topicOptions.find((item) => item.name === nextTopic);
 
     try {
       if (option?.id) {
-        await deleteCategoryRequest(option.id);
+        await deleteTopicRequest(option.id);
       }
 
-      setCategoryOptions((current) => current.filter((item) => item.name !== nextCategory));
+      setTopicOptions((current) => current.filter((item) => item.name !== nextTopic));
 
-      if (category === nextCategory) {
-        setCategory(editorCategories.find((item) => item !== nextCategory) ?? '');
+      if (topic === nextTopic) {
+        setTopic(editorTopics.find((item) => item !== nextTopic) ?? '');
       }
     } catch (error) {
-      setArticleError(error instanceof Error ? error.message : '分类删除失败');
+      setArticleError(error instanceof Error ? error.message : '主题删除失败');
     }
   };
 
@@ -391,10 +392,10 @@ export function EditorPage() {
     setTags((currentTags) => currentTags.filter((item) => item !== tag));
   };
 
-  const exactCategory = normalizeTaxonomyValue(categoryQuery);
-  const canCreateCategory =
-    exactCategory.length > 0 &&
-    !editorCategories.some((item) => item.toLowerCase() === exactCategory.toLowerCase());
+  const exactTopic = normalizeTaxonomyValue(topicQuery);
+  const canCreateTopic =
+    exactTopic.length > 0 &&
+    !editorTopics.some((item) => item.toLowerCase() === exactTopic.toLowerCase());
 
   return (
     <section className={`editor-page ${isFullscreen ? 'is-fullscreen' : ''}`}>
@@ -462,7 +463,7 @@ export function EditorPage() {
       ) : null}
 
       <SimpleEditor
-        key={`${articleId ?? 'new'}-${editorContentVersion}`}
+        key={`${articleSlug ?? 'new'}-${editorContentVersion}`}
         content={editorContent}
         contentType="markdown"
         ariaLabel="正文编辑区"
@@ -489,34 +490,34 @@ export function EditorPage() {
                   >
                     <div className="page-content editor-page-content">
                       <div className="editor-taxonomy">
-                        <div className="editor-category-picker">
+                        <div className="editor-topic-picker">
                           <button
-                            ref={categoryButtonRef}
+                            ref={topicButtonRef}
                             type="button"
-                            className="editor-category-button"
+                            className="editor-topic-button"
                             aria-haspopup="menu"
-                            aria-expanded={isCategoryMenuOpen}
+                            aria-expanded={isTopicMenuOpen}
                             onClick={() => {
-                              setIsCategoryMenuOpen((open) => !open);
+                              setIsTopicMenuOpen((open) => !open);
                               setIsTagInputVisible(false);
                             }}
                           >
-                            {category} · ESSAY
+                            {topic} · TOPIC
                             <ChevronDown size={14} strokeWidth={1.8} aria-hidden="true" />
                           </button>
 
-                          {isCategoryMenuOpen ? (
-                            <div ref={categoryMenuRef} className="editor-taxonomy-menu" role="menu">
+                          {isTopicMenuOpen ? (
+                            <div ref={topicMenuRef} className="editor-taxonomy-menu" role="menu">
                               <label className="editor-taxonomy-field">
-                                <span>搜索或创建分类</span>
+                                <span>搜索或创建主题</span>
                                 <input
-                                  value={categoryQuery}
-                                  placeholder="输入分类名称"
-                                  onChange={(event) => setCategoryQuery(event.target.value)}
+                                  value={topicQuery}
+                                  placeholder="输入主题名称"
+                                  onChange={(event) => setTopicQuery(event.target.value)}
                                   onKeyDown={(event) => {
                                     if (event.key === 'Enter') {
                                       event.preventDefault();
-                                      selectCategory(availableCategories[0] ?? exactCategory);
+                                      selectTopic(availableTopics[0] ?? exactTopic);
                                     }
                                   }}
                                 />
@@ -525,20 +526,20 @@ export function EditorPage() {
                               <div
                                 className="editor-taxonomy-options"
                                 role="group"
-                                aria-label="可选择分类"
+                                aria-label="可选择主题"
                               >
-                                {availableCategories.map((item) => (
+                                {availableTopics.map((item) => (
                                   <div
                                     key={item}
                                     className={`editor-taxonomy-option ${
-                                      item === category ? 'active' : ''
+                                      item === topic ? 'active' : ''
                                     }`}
                                   >
                                     <button
                                       type="button"
                                       role="menuitem"
                                       className="editor-taxonomy-option-label"
-                                      onClick={() => selectCategory(item)}
+                                      onClick={() => selectTopic(item)}
                                     >
                                       {item}
                                     </button>
@@ -546,28 +547,28 @@ export function EditorPage() {
                                       type="button"
                                       role="menuitem"
                                       className="editor-taxonomy-option-delete"
-                                      aria-label={`删除分类 ${item}`}
-                                      disabled={editorCategories.length <= 1}
-                                      onClick={() => deleteCategory(item)}
+                                      aria-label={`删除主题 ${item}`}
+                                      disabled={editorTopics.length <= 1}
+                                      onClick={() => deleteTopic(item)}
                                     >
                                       <X size={12} strokeWidth={2} aria-hidden="true" />
                                     </button>
                                   </div>
                                 ))}
 
-                                {canCreateCategory ? (
+                                {canCreateTopic ? (
                                   <button
                                     type="button"
                                     role="menuitem"
                                     className="create"
-                                    onClick={() => selectCategory(exactCategory)}
+                                    onClick={() => selectTopic(exactTopic)}
                                   >
-                                    创建「{exactCategory}」并使用
+                                    创建「{exactTopic}」并使用
                                   </button>
                                 ) : null}
 
-                                {availableCategories.length === 0 && !canCreateCategory ? (
-                                  <span className="editor-taxonomy-empty">没有找到分类</span>
+                                {availableTopics.length === 0 && !canCreateTopic ? (
+                                  <span className="editor-taxonomy-empty">没有找到主题</span>
                                 ) : null}
                               </div>
                             </div>
@@ -615,9 +616,9 @@ export function EditorPage() {
                       exit={{ opacity: 0, height: 0, marginTop: 0 }}
                       transition={editorLayoutTransition}
                     >
-                      {coverImage ? (
+                      {cover ? (
                         <figure className="editor-cover">
-                          <img src={coverImage} alt="文章封面" />
+                          <img src={cover} alt="文章封面" />
                           <label
                             className="editor-cover-action"
                             htmlFor={coverInputId}
@@ -715,7 +716,7 @@ export function EditorPage() {
                                   onClick={() => {
                                     setIsTagInputVisible(true);
                                     setTagQuery('');
-                                    setIsCategoryMenuOpen(false);
+                                    setIsTopicMenuOpen(false);
                                   }}
                                 >
                                   <Plus size={12} strokeWidth={2} aria-hidden="true" />

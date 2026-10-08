@@ -70,28 +70,28 @@ test('shows PageHush metadata around the official Tiptap Simple Editor', async (
   await login(page);
   await page.goto('/editor');
   await expect(page.getByRole('link', { name: '页息 PageHush 首页' })).toHaveCount(0);
-  await expect(page.getByText('随笔 · ESSAY')).toBeVisible();
+  await expect(page.getByText('随笔 · TOPIC')).toBeVisible();
   await expect(page.getByLabel('文章标题')).toHaveValue('把日子，写慢一点');
   await expect(page.getByText('2026-10-06')).toBeVisible();
   await expect(page.getByText(/\d+ 字/)).toBeVisible();
   await expect(page.getByText('#写作')).toBeVisible();
   await expect(page.getByText('#Markdown')).toBeVisible();
 
-  await page.getByRole('button', { name: /随笔 · ESSAY/ }).click();
+  await page.getByRole('button', { name: /随笔 · TOPIC/ }).click();
   await page.getByRole('menuitem', { name: '生活', exact: true }).click();
-  await expect(page.getByRole('button', { name: /生活 · ESSAY/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /生活 · TOPIC/ })).toBeVisible();
 
-  await expect(page.locator('.editor-category-button')).toHaveCSS('border-top-width', '0px');
+  await expect(page.locator('.editor-topic-button')).toHaveCSS('border-top-width', '0px');
   await expect(page.locator('.editor-tag').first()).toHaveCSS('border-top-width', '0px');
   await expect(page.locator('.editor-tag').first().locator('button')).toHaveCSS('opacity', '0');
 
-  const categoryButton = page.getByRole('button', { name: /生活 · ESSAY/ });
-  await expect(categoryButton.locator('svg')).toHaveCSS('opacity', '0');
-  await expect(categoryButton).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  const topicButton = page.getByRole('button', { name: /生活 · TOPIC/ });
+  await expect(topicButton.locator('svg')).toHaveCSS('opacity', '0');
+  await expect(topicButton).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 
-  await categoryButton.hover();
-  await expect(categoryButton.locator('svg')).toHaveCSS('opacity', '1');
-  await expect(categoryButton).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await topicButton.hover();
+  await expect(topicButton.locator('svg')).toHaveCSS('opacity', '1');
+  await expect(topicButton).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 
   const firstTag = page.locator('.editor-tag').first();
   await firstTag.hover();
@@ -136,7 +136,7 @@ test('editor fills the screen and enters Motion fullscreen mode', async ({ page 
   await expect(page.getByRole('banner')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '返回上一页' })).toBeVisible();
   await expect(page.locator('.editor-back-button svg')).toBeVisible();
-  await expect(page.getByRole('button', { name: /随笔 · ESSAY/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /随笔 · TOPIC/ })).toBeVisible();
   await expect(page.getByLabel('文章标题')).toBeVisible();
 
   const initialToolbarTop = await page
@@ -145,7 +145,7 @@ test('editor fills the screen and enters Motion fullscreen mode', async ({ page 
   await expect(page.locator('.lucide-maximize')).toBeVisible();
   await page.getByRole('button', { name: '进入全屏' }).click();
 
-  await expect(page.getByRole('button', { name: /随笔 · ESSAY/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /随笔 · TOPIC/ })).toHaveCount(0);
   await expect(page.locator('.editor-metadata')).toHaveCount(0);
   const fullscreenTitle = page.getByLabel('文章标题');
   await expect(fullscreenTitle).toBeVisible();
@@ -168,7 +168,7 @@ test('editor fills the screen and enters Motion fullscreen mode', async ({ page 
   await expect(page.locator('.lucide-minimize')).toBeVisible();
 
   await page.getByRole('button', { name: '退出全屏' }).click();
-  await expect(page.getByRole('button', { name: /随笔 · ESSAY/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /随笔 · TOPIC/ })).toBeVisible();
   await expect(page.getByLabel('文章标题')).toHaveCSS('font-size', '32px');
   expect(await page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
 });
@@ -261,40 +261,40 @@ test('opens the article library by default', async ({ page }) => {
     .first()
     .evaluate((card) => {
       const title = card.querySelector('.article-card-title') as Element;
-      const excerpt = card.querySelector('.article-card-excerpt') as Element;
-      const image = card.querySelector('.article-card-media') as Element;
+      const description = card.querySelector('.article-card-description') as Element;
+      const cover = card.querySelector('.article-card-media') as Element;
 
       return {
-        imageAspectRatio: getComputedStyle(image).aspectRatio,
+        coverAspectRatio: getComputedStyle(cover).aspectRatio,
         titleLineClamp: getComputedStyle(title).webkitLineClamp,
-        excerptLineClamp: getComputedStyle(excerpt).webkitLineClamp,
+        descriptionLineClamp: getComputedStyle(description).webkitLineClamp,
       };
     });
 
-  expect(textClamps.imageAspectRatio).toBe('16 / 9');
+  expect(textClamps.coverAspectRatio).toBe('16 / 9');
   expect(textClamps.titleLineClamp).toBe('2');
-  expect(textClamps.excerptLineClamp).toBe('2');
+  expect(textClamps.descriptionLineClamp).toBe('2');
 
   const tagGeometry = await page.locator('.article-card').evaluateAll((cards) => {
     const geometry = cards.map((card) => {
-      const excerpt = (
-        card.querySelector('.article-card-excerpt') as Element
+      const description = (
+        card.querySelector('.article-card-description') as Element
       ).getBoundingClientRect();
       const tags = (card.querySelector('.article-card-tags') as Element).getBoundingClientRect();
       const cardBox = card.getBoundingClientRect();
       return {
-        excerptToTags: Math.round(tags.top - excerpt.bottom),
+        descriptionToTags: Math.round(tags.top - description.bottom),
         tagOffsetFromCardTop: Math.round(tags.top - cardBox.top),
       };
     });
 
     return {
-      excerptToTags: [...new Set(geometry.map((item) => item.excerptToTags))],
+      descriptionToTags: [...new Set(geometry.map((item) => item.descriptionToTags))],
       tagOffsets: [...new Set(geometry.map((item) => item.tagOffsetFromCardTop))],
     };
   });
 
-  expect(tagGeometry.excerptToTags).toEqual([8]);
+  expect(tagGeometry.descriptionToTags).toEqual([8]);
   expect(tagGeometry.tagOffsets).toHaveLength(1);
 
   expect(cardColumns).toBe(4);
@@ -303,7 +303,7 @@ test('opens the article library by default', async ({ page }) => {
 
   await page.getByRole('button', { name: '生活' }).click();
   await expect(page.locator('.article-card')).toHaveCount(2);
-  await expect(page).toHaveURL('/?category=生活');
+  await expect(page).toHaveURL('/?topic=生活');
   await page.getByRole('button', { name: '全部' }).click();
   await expect(page.locator('.article-card')).toHaveCount(8);
 
@@ -359,7 +359,7 @@ test('opening and adding an inline tag keeps the metadata divider stable', async
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
   await page.goto('/editor');
-  await page.getByRole('button', { name: /随笔 · ESSAY/ }).waitFor();
+  await page.getByRole('button', { name: /随笔 · TOPIC/ }).waitFor();
 
   const dividerTop = () =>
     page
