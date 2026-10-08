@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 
 test('shows PageHush metadata around the official Tiptap Simple Editor', async ({ page }) => {
@@ -11,7 +12,7 @@ test('shows PageHush metadata around the official Tiptap Simple Editor', async (
   await expect(page.getByText('#Markdown')).toBeVisible();
 
   await page.getByRole('button', { name: /随笔 · ESSAY/ }).click();
-  await page.getByRole('menuitem', { name: '生活' }).click();
+  await page.getByRole('menuitem', { name: '生活', exact: true }).click();
   await expect(page.getByRole('button', { name: /生活 · ESSAY/ })).toBeVisible();
 
   await expect(page.locator('.editor-category-button')).toHaveCSS('border-top-width', '0px');
@@ -305,4 +306,20 @@ test('opening and adding an inline tag keeps the metadata divider stable', async
 
   expect(openTop).toBeLessThanOrEqual(initialTop);
   expect(addedTop).toBe(openTop);
+});
+
+test('uploads and previews an article cover', async ({ page }) => {
+  await page.goto('/editor');
+  const placeholder = page.locator('.editor-cover-empty');
+  await expect(placeholder).toBeVisible();
+  await expect(placeholder).toContainText('上传封面');
+
+  await page
+    .locator('.editor-cover-input')
+    .setInputFiles(join(process.cwd(), 'packages/web/public/articles/article-01.jpg'));
+
+  const cover = page.locator('.editor-cover');
+  await expect(cover).toBeVisible();
+  await expect(cover.locator('img')).toBeVisible();
+  await expect(page.locator('.editor-cover-action')).toContainText('更换封面');
 });

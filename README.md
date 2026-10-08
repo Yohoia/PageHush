@@ -1,25 +1,38 @@
-# 页息 PageHush · 个人博客文章工作台
+<div align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="页息 PageHush：个人博客的 Markdown / MDX 写作工作台">
+</div>
 
-页息是为 Yohoia 的 Astro 个人博客制作的 Markdown / MDX 写作、文章管理与发布平台。首版面向一个作者、一个博客，没有登录和账号模块。
+# 页息 PageHush
 
-当前状态：
+页息是一个为个人 Astro 博客打造的写作工作台。它把文章画廊、编辑器、内容状态和未来发布链路收进同一套轻量纸面界面。首版面向一个作者、一个博客，不包含登录和账号系统。
 
-- 已搭建 npm workspaces 基础框架：`web`、`api`、`worker`、`shared`。
-- React 工作台已接入 Logo、中文品牌字、React Router、Motion、Tailwind CSS，以及 Tiptap 官方 Simple Editor 模板、官方 Toolbar 和官方图标。
-- Fastify API 骨架提供 `/v1/health` 与 `/v1/stages`，尚未连接业务数据。
-- 首页已按用户提供的《PageHush-articles-design-v1.html》改为四列文章画廊，支持分类筛选、动态计数、状态与标签展示、卡片动画和滚动后新建文章入口；当前数据来自 `packages/web/src/data/articles.ts`。
-- 本阶段不在本机启动 PostgreSQL、MinIO、Docker 或发布任务；后续直接连接服务器上已部署的 PostgreSQL 与 MinIO。
-- Markdown / MDX 源文本仍是未来内容保存的唯一真源；Tiptap 状态与 HTML 只能作为派生数据。
-- 编辑器当前使用官方 Simple Editor 的 Inter / DM Sans 字体；应用外壳仍保持轻量纸面视觉。
-- 全站页面使用双层宽度体系：写作主内容 760px，全站安全区 1400px；首页文章卡片区使用安全区内宽度，桌面四列、平板两列、手机一列。
+## 界面预览
 
-## 文档
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="./assets/readme/screenshots/home.png" width="100%" alt="PageHush 首页：文章画廊、分类筛选和文章数量"><br>
+      <sub>首页：四列文章画廊、分类筛选与动态计数</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="./assets/readme/screenshots/editor.png" width="100%" alt="PageHush 文章编辑页：分类、标题、封面、元信息和编辑器"><br>
+      <sub>文章详情：分类、标题、封面与编辑器</sub>
+    </td>
+  </tr>
+</table>
 
-- [项目规划](docs/project-plan.md)
-- [技术栈方案](docs/tech-stack.md)
-- [编辑器选型](docs/editor-options.md)
-- [自建对象存储方案](docs/self-hosted-storage.md)
-- [第一版设计原型](design/writing/solo.html)
+## 现在能做什么
+
+- **文章画廊**：浏览文章封面、分类、标签与状态；支持分类筛选、动态计数和滚动后新建入口。
+- **写作与编辑**：基于 Tiptap 官方 Simple Editor 编辑内容，支持分类、标签、标题、封面预览与全屏写作。
+- **本地开发骨架**：npm workspaces 组织 `web`、`api`、`worker`、`shared`，并提供类型检查、Lint、单元测试和 E2E 测试脚本。
+- **API 骨架**：Fastify 已提供 `/v1/health` 和 `/v1/stages`，用于验证服务边界。
+
+## 内容机制
+
+Markdown / MDX 源文本是未来内容保存的唯一真源。Tiptap 的编辑器状态和 HTML 只作为派生数据；后续内容保存、预览和发布都会回到源文本与服务器端构建链路。
+
+项目不在本地启动 PostgreSQL、MinIO、Docker 或发布任务。这些依赖计划连接到服务器上已部署的实例，本地仓库只保留清晰的边界与配置示例。
 
 ## 本地开发
 
@@ -28,7 +41,7 @@ npm install
 npm run dev:web
 ```
 
-Web 默认地址：`http://127.0.0.1:5173`。
+打开 <http://127.0.0.1:5173>。
 
 如需临时检查 API 骨架：
 
@@ -36,41 +49,53 @@ Web 默认地址：`http://127.0.0.1:5173`。
 npm run dev:api
 ```
 
-API 默认地址：`http://127.0.0.1:8787`，健康检查为 `/v1/health`。当前业务模块尚未实现；数据库与对象存储配置等待服务器实例信息。
+API 地址：<http://127.0.0.1:8787>，健康检查为 `/v1/health`。
 
 ## 常用命令
 
-```bash
-npm run typecheck
-npm run lint
-npm test
-npm run build
-npm run check
-npm run format:check
-```
+| 命令                   | 用途                               |
+| ---------------------- | ---------------------------------- |
+| `npm run dev:web`      | 启动 Web 开发服务器                |
+| `npm run dev:api`      | 启动 Fastify API 骨架              |
+| `npm run typecheck`    | 检查所有 workspace 类型            |
+| `npm run lint`         | 运行 ESLint                        |
+| `npm test`             | 运行单元测试                       |
+| `npm run test:e2e`     | 运行 Playwright 浏览器测试         |
+| `npm run build`        | 构建 shared、api、worker 和 web    |
+| `npm run check`        | 串联类型检查、Lint、单元测试和构建 |
+| `npm run format:check` | 检查 Prettier 格式                 |
 
-## 结构
+## 项目结构
 
-| 路径              | 职责                                                   |
-| ----------------- | ------------------------------------------------------ |
-| `packages/web`    | React SPA、页息界面、官方 Simple Editor 与未来内容预览 |
-| `packages/api`    | Fastify 管理 API、服务器资源适配与发布接口             |
-| `packages/worker` | 未来预览、构建与发布任务 worker                        |
-| `packages/shared` | API 契约、领域枚举与跨端共享类型                       |
-| `design/writing`  | 已确定的纸面写作视觉与交互原型                         |
-| `logo`            | 原始 Logo 资产                                         |
-| `docs`            | 功能范围、技术选型与实施约束                           |
+| 路径              | 职责                                         |
+| ----------------- | -------------------------------------------- |
+| `packages/web`    | React SPA、文章画廊、Tiptap 编辑器与内容界面 |
+| `packages/api`    | Fastify 管理 API、服务器资源适配与发布接口   |
+| `packages/worker` | 未来预览、构建与发布任务 worker              |
+| `packages/shared` | API 契约、领域枚举与跨端共享类型             |
+| `design/writing`  | 纸面写作视觉与交互原型                       |
+| `docs`            | 项目规划、技术选型与实施约束                 |
+| `logo`            | 原始 Logo 资产                               |
 
-## Logo 资产
+## 当前进度
 
-原始文件保留在 `logo/`，当前 Web 构建使用：
+| 模块       | 状态                                           |
+| ---------- | ---------------------------------------------- |
+| Web 界面   | 可运行：首页画廊、文章编辑、封面占位与全屏写作 |
+| 编辑器     | 已接入 Tiptap Simple Editor 与 Markdown 扩展   |
+| API        | 骨架已就绪，业务数据接口尚未实现               |
+| 数据持久化 | PostgreSQL 尚未接入                            |
+| 对象存储   | MinIO 尚未接入                                 |
+| 发布链路   | Astro 构建、内容包与 Nginx 切换尚未实现        |
 
-- `logo-128.png`：左侧主标，来自 `logo/logo.png`
-- `chinese-logo.png`：已裁切透明留白的中文品牌字，位于主标右侧
-- `favicon-128.png`：浏览器图标，裁切自 `logo/favicon.png`
+## 设计与文档
 
-英文品牌字保留在 `logo/englishlogo.png`，待品牌页或展示场景需要时再生成对应尺寸。
+- [项目规划](docs/project-plan.md)
+- [技术栈方案](docs/tech-stack.md)
+- [编辑器选型](docs/editor-options.md)
+- [自建对象存储方案](docs/self-hosted-storage.md)
+- [第一版设计原型](design/writing/solo.html)
 
 ## 服务器依赖边界
 
-`.env.example` 只保留连接示例，不提交真实凭据。PostgreSQL、MinIO、Astro 构建任务和 Nginx 发布切换都在服务器部署；本地开发框架不内置容器编排，也不默认启动后台任务。
+`.env.example` 只保留连接示例，不提交真实凭据。PostgreSQL、MinIO、Astro 构建任务和 Nginx 发布切换都部署在服务器端；本地开发框架不内置容器编排，也不默认启动后台任务。

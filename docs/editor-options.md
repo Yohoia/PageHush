@@ -1,6 +1,6 @@
 # 页息 PageHush · 编辑器方案讨论
 
-2026-10-06。用户已确定：**使用 Tiptap 开源版搭建 Markdown 编辑器**；对象存储采用 MinIO 社区版。版本核对与隔离验证见[技术基线](tech-stack.md)，真实文章及 MDX 的完整验收尚未完成。以下其他库比较作为选型留档。
+2026-10-06 确定，2026-10-08 更新。用户已确定使用 Tiptap 开源版，当前 Web 工作台已接入 Tiptap Simple Editor 与 Markdown 扩展；对象存储仍采用 MinIO 社区版。真实文章及 MDX 的完整保真验收尚未完成。以下其他库比较作为选型留档。
 
 ## 1. 已确定方案与选型留档
 
@@ -18,13 +18,13 @@ CodeMirror 提供成熟的文本编辑基础，正文直接保存 Markdown / MDX
 
 下表的适配工作是本项目判断，不能视为已经实现或测试通过。
 
-| 方案 | 已提供的基础 | 本项目需要补足 | 取舍 |
-| --- | --- | --- | --- |
-| CodeMirror 6 | 文本编辑、Markdown 语言支持、代码块语言配置；见[官方 Markdown 包说明](https://github.com/codemirror/lang-markdown) | 快速预览、上传插入、组件提示、MDX 语法高亮配置；即时渲染需要额外开发 | 优先建议，直接编辑原文，便于保护未知 MDX 语法 |
-| Tiptap | 可自定义 UI 的富文本框架，Markdown 双向转换扩展（Beta）、数学公式、代码高亮与 React NodeView；见[官方 Markdown 文档](https://tiptap.dev/docs/editor/markdown) | Mermaid、图注、媒体上传接入、MDX 解析/导出与原文保留；不能直接把任意 MDX 导入富文本后自动保存 | 重点候选，适合纸面可视化写作；组件编辑灵活，内容适配责任较大 |
-| MDXEditor | React 富文本 Markdown 编辑器；JSX 组件、表达式编辑及源码/差异模式，见[JSX 文档](https://mdxeditor.dev/editor/docs/jsx)与[源码模式](https://mdxeditor.dev/editor/docs/diff-source) | 组件描述与编辑界面、公式、Mermaid、图注规则；测试 import/export、未知组件与模式切换 | 可视化写作的优先候选，扩展内容仍需适配 |
-| Vditor | 即时渲染、所见即所得、分屏预览，含公式、Mermaid、代码高亮、图片上传入口，见[官方说明](https://github.com/Vanessa219/vditor) | 与博客渲染规则对齐、图注、MDX 保真验证；自身解析器面向 CommonMark/GFM，不能假定任意 MDX 兼容 | 普通 Markdown 功能齐全；全量 MDX 是需要先解决的门槛 |
-| Milkdown | 插件化所见即所得框架，基于 ProseMirror / remark，可定制界面，见[官方说明](https://milkdown.dev/) | MDX 节点、序列化、公式/图表与组件编辑的具体集成 | 适合深度定制富文本体验；本项目的 MDX 适配工作预计更多，暂作备选 |
+| 方案         | 已提供的基础                                                                                                                                                                      | 本项目需要补足                                                                                | 取舍                                                            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| CodeMirror 6 | 文本编辑、Markdown 语言支持、代码块语言配置；见[官方 Markdown 包说明](https://github.com/codemirror/lang-markdown)                                                                | 快速预览、上传插入、组件提示、MDX 语法高亮配置；即时渲染需要额外开发                          | 优先建议，直接编辑原文，便于保护未知 MDX 语法                   |
+| Tiptap       | 可自定义 UI 的富文本框架，Markdown 双向转换扩展（Beta）、数学公式、代码高亮与 React NodeView；见[官方 Markdown 文档](https://tiptap.dev/docs/editor/markdown)                     | Mermaid、图注、媒体上传接入、MDX 解析/导出与原文保留；不能直接把任意 MDX 导入富文本后自动保存 | 重点候选，适合纸面可视化写作；组件编辑灵活，内容适配责任较大    |
+| MDXEditor    | React 富文本 Markdown 编辑器；JSX 组件、表达式编辑及源码/差异模式，见[JSX 文档](https://mdxeditor.dev/editor/docs/jsx)与[源码模式](https://mdxeditor.dev/editor/docs/diff-source) | 组件描述与编辑界面、公式、Mermaid、图注规则；测试 import/export、未知组件与模式切换           | 可视化写作的优先候选，扩展内容仍需适配                          |
+| Vditor       | 即时渲染、所见即所得、分屏预览，含公式、Mermaid、代码高亮、图片上传入口，见[官方说明](https://github.com/Vanessa219/vditor)                                                       | 与博客渲染规则对齐、图注、MDX 保真验证；自身解析器面向 CommonMark/GFM，不能假定任意 MDX 兼容  | 普通 Markdown 功能齐全；全量 MDX 是需要先解决的门槛             |
+| Milkdown     | 插件化所见即所得框架，基于 ProseMirror / remark，可定制界面，见[官方说明](https://milkdown.dev/)                                                                                  | MDX 节点、序列化、公式/图表与组件编辑的具体集成                                               | 适合深度定制富文本体验；本项目的 MDX 适配工作预计更多，暂作备选 |
 
 CodeMirror 的 GitHub 仓库注明已迁到作者维护的代码平台，见[迁移说明](https://github.com/codemirror/dev)。不能仅从 GitHub 归档标记推断项目停止维护；正式接入时核对当前包版本与兼容性。
 
@@ -76,14 +76,14 @@ Tiptap 的核心不规定工具栏和页面外观，可自行组织正文排版�
 
 ### 与首版内容要求的对应
 
-| 要求 | 接入方案与边界 |
-| --- | --- |
-| 公式 | 使用官方 Mathematics 扩展与 KaTeX；另验证 `$...$` / `$$...$$` 的解析、输出和博客一致性，不能只验证编辑区显示。见[公式文档](https://tiptap.dev/docs/editor/extensions/nodes/mathematics) |
-| 代码 | 基于官方 CodeBlock 扩展接入 Shiki 4.4.3，与博客和快速预览统一主题、语言与别名；编辑高亮适配待实现。见[代码块扩展](https://tiptap.dev/docs/editor/extensions/nodes/code-block)与[Shiki token 接口](https://shiki.style/guide/install) |
-| Mermaid | 自定义内容块或代码块视图，保存围栏源码并按需渲染图表；导入导出需单独实现与验证 |
-| 图片与图注 | Image 扩展负责图片显示；MinIO 上传由平台接口实现。图注定义独立 caption 节点/字段并约定源语法，不能以 title 代替。见[图片文档](https://tiptap.dev/docs/editor/extensions/nodes/image) |
-| 博客组件 | 可用 React NodeView 制作组件参数和子内容的编辑界面，见[官方 NodeView 文档](https://tiptap.dev/docs/editor/extensions/custom-extensions/node-views/react)；它是编辑视图，不等于自动执行 MDX，也不能直接执行 `.astro` 组件 |
-| MDX 原文 | import/export、JSX、表达式与嵌套组件需要适配解析、节点映射和序列化；现成 Markdown 扩展不能据此声称任意 MDX 无损 |
+| 要求       | 接入方案与边界                                                                                                                                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 公式       | 使用官方 Mathematics 扩展与 KaTeX；另验证 `$...$` / `$$...$$` 的解析、输出和博客一致性，不能只验证编辑区显示。见[公式文档](https://tiptap.dev/docs/editor/extensions/nodes/mathematics)                                              |
+| 代码       | 基于官方 CodeBlock 扩展接入 Shiki 4.4.3，与博客和快速预览统一主题、语言与别名；编辑高亮适配待实现。见[代码块扩展](https://tiptap.dev/docs/editor/extensions/nodes/code-block)与[Shiki token 接口](https://shiki.style/guide/install) |
+| Mermaid    | 自定义内容块或代码块视图，保存围栏源码并按需渲染图表；导入导出需单独实现与验证                                                                                                                                                       |
+| 图片与图注 | Image 扩展负责图片显示；MinIO 上传由平台接口实现。图注定义独立 caption 节点/字段并约定源语法，不能以 title 代替。见[图片文档](https://tiptap.dev/docs/editor/extensions/nodes/image)                                                 |
+| 博客组件   | 可用 React NodeView 制作组件参数和子内容的编辑界面，见[官方 NodeView 文档](https://tiptap.dev/docs/editor/extensions/custom-extensions/node-views/react)；它是编辑视图，不等于自动执行 MDX，也不能直接执行 `.astro` 组件             |
+| MDX 原文   | import/export、JSX、表达式与嵌套组件需要适配解析、节点映射和序列化；现成 Markdown 扩展不能据此声称任意 MDX 无损                                                                                                                      |
 
 官方说明 Tiptap 的 schema 严格限制内容结构，未定义的内容不能自动保留，见[schema 文档](https://tiptap.dev/docs/editor/core-concepts/schema)。Markdown 使用说明也要求加载对应扩展并验证往返，见[官方基本用法](https://tiptap.dev/docs/editor/markdown/getting-started/basic-usage)。因此未知组件与语法不能未经检查直接进入富文本并触发自动保存。
 
@@ -100,3 +100,9 @@ Tiptap 的核心不规定工具栏和页面外观，可自行组织正文排版�
 开源核心采用 MIT，官方另提供需订阅的 Pro 扩展，见[官方仓库](https://github.com/ueberdosis/tiptap)。首版计划采用开源核心及所需开源扩展；保存、历史与媒体服务由平台自己提供，不以购买 Tiptap Cloud 或 Pro 为开发前提。具体依赖版本与许可证在正式接入时核对。
 
 当前决定：用户已选择 Tiptap 开源版。后续验证真实文章和受控 MDX 样例，围绕 Tiptap 实现所需内容适配，不以改换其他库或限制文章格式代替验收。
+
+### 2026-10-08 集成进展
+
+Tiptap React 绑定、StarterKit、Markdown、Mathematics、Highlight、CodeBlock、TextAlign、Typography、任务列表、图片与查找替换等扩展已在 Web 工作台注册。官方 Simple Editor 的 Toolbar、按钮与图标源码已进入项目，并按 PageHush 的纸面布局调整。
+
+当前已完成的是编辑界面和本地交互；Markdown / MDX 源文本保存、复杂内容往返、真实 Astro 构建和服务器持久化仍未验收。

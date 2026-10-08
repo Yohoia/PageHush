@@ -1,6 +1,6 @@
 # 页息 PageHush · 技术栈方案
 
-2026-10-06。用户确定采用 Tiptap 开源版和 MinIO 社区版，并取消登录需求。样式建议采用 Tailwind CSS，与现有博客保持一致；代码高亮统一 Shiki。基础框架已按此方案搭建；版本依据 npm 官方发布元数据、官方文档与现有博客锁文件核对。骨架通过类型检查、单元测试、生产构建与浏览器冒烟测试，但不代表数据库、MinIO、MDX 保真或云端发布已完成集成测试。
+2026-10-06 制定，2026-10-08 更新。用户确定采用 Tiptap 开源版和 MinIO 社区版，并取消登录需求。样式采用 Tailwind CSS，与现有博客保持一致；代码高亮统一 Shiki。基础框架和前端工作台已实现，类型检查、Lint、单元测试、生产构建与 Playwright 浏览器测试均通过；数据库、MinIO、MDX 保真和云端发布仍未完成集成测试。
 
 ## 1. 技术栈与版本
 
@@ -80,3 +80,12 @@ UnoCSS 也可实现既定样式，但当前方案优先采用博客已有的 Tai
 本阶段没有 Docker Compose、本地 PostgreSQL、本地 MinIO、数据库迁移或发布任务。`DATABASE_URL` 与 MinIO 参数只作为未来连接服务器实例的配置占位。
 
 `drizzle-kit` 暂未安装：数据库模型与 SQL 迁移开始前引入工具更合适，也避免当前把带已知开发依赖风险的未用工具放进基础骨架。`drizzle-orm` 已按版本基线保留。当前锁定版本下 npm audit 报告 KaTeX 相关链路 5 个低危提示；KaTeX 0.16.47 是与博客和 Tiptap Mathematics 兼容的既定基线，接入不受信公式内容前需要再评估并补充安全验收。
+
+## 5. 2026-10-08 界面与测试进展
+
+- Web 工作台已实现首页文章画廊、分类筛选、文章详情编辑、标题与封面占位。
+- Tiptap 官方 Simple Editor 源码已接入正式编辑器，并按 PageHush 页面布局拆出 `EditorLayout`。
+- 前端已使用 React Router、Motion、Tailwind CSS 与局部 SCSS/CSS 设计变量。
+- 测试体系包含 Vitest 单元测试、Playwright E2E、ESLint、Prettier、TypeScript 与生产构建检查。
+- E2E 已覆盖首页画廊、编辑器元信息、分类选择、标签添加、全屏写作、封面占位与本地图片预览。
+- 封面上传目前使用浏览器 Object URL 做即时预览；MinIO 持久化、引用关系与响应式资源生成仍未接入。

@@ -1,6 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from 'react';
 import type { Editor } from '@tiptap/react';
-import { ArrowLeft, ChevronDown, Maximize, Minimize, Plus, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Images, Maximize, Minimize, Plus, X } from 'lucide-react';
 import { EditorLayout } from '@/components/EditorLayout';
 import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
 import {
@@ -38,6 +47,8 @@ function normalizeTaxonomyValue(value: string): string {
   return value.replace(/^#+/, '').trim();
 }
 
+const MAX_COVER_FILE_SIZE = 5 * 1024 * 1024;
+
 export function EditorPage() {
   const { articleId } = useParams();
   const navigate = useNavigate();
@@ -47,6 +58,11 @@ export function EditorPage() {
   );
   const article = selectedArticle ?? newArticle;
   const articleMarkdown = selectedArticle?.markdown ?? defaultArticleMarkdown;
+  const coverInputId = useId();
+
+  const [coverImage, setCoverImage] = useState<string | null>(selectedArticle?.image ?? null);
+  const [coverObjectUrl, setCoverObjectUrl] = useState<string | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
 
   const [title, setTitle] = useState(article.title);
   const [category, setCategory] = useState(article.category);
@@ -57,11 +73,13 @@ export function EditorPage() {
   const [isTagInputVisible, setIsTagInputVisible] = useState(false);
   const [tagQuery, setTagQuery] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [deletedCategories, setDeletedCategories] = useState<Set<string>>(() => new Set());
 
   const categoryButtonRef = useRef<HTMLButtonElement>(null);
   const categoryMenuRef = useRef<HTMLDivElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const supportsFieldSizing = () =>
     typeof CSS !== 'undefined' && CSS.supports('field-sizing: content');
@@ -88,11 +106,15 @@ export function EditorPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, [resizeTitleInput]);
 
+  const editorCategories = useMemo(
+    () => articleCategories.filter((item) => item !== '全部' && !deletedCategories.has(item)),
+    [deletedCategories],
+  );
+
   const availableCategories = useMemo(() => {
-    const base = articleCategories.filter((item) => item !== '全部');
     const query = categoryQuery.trim();
-    return query ? base.filter((item) => item.includes(query)) : base;
-  }, [categoryQuery]);
+    return query ? editorCategories.filter((item) => item.includes(query)) : editorCategories;
+  }, [categoryQuery, editorCategories]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -136,6 +158,38 @@ export function EditorPage() {
     }
   }, [isTagInputVisible]);
 
+  useEffect(() => {
+    const objectUrl = coverObjectUrl;
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [coverObjectUrl]);
+
+  const handleCoverChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setCoverError('请选择图片文件');
+      return;
+    }
+
+    if (file.size > MAX_COVER_FILE_SIZE) {
+      setCoverError('封面图片不能超过 5MB');
+      return;
+    }
+
+    const nextObjectUrl = URL.createObjectURL(file);
+    setCoverImage(nextObjectUrl);
+    setCoverObjectUrl(nextObjectUrl);
+    setCoverError(null);
+    event.target.value = '';
+  };
+
   const handleEditorUpdate = useCallback((editor: Editor) => {
     setCharacterCount(countWords(editor.getText()));
   }, []);
@@ -164,6 +218,16 @@ export function EditorPage() {
     setCategoryQuery('');
   };
 
+  const deleteCategory = (nextCategory: string) => {
+    if (editorCategories.length <= 1) return;
+
+    setDeletedCategories((current) => new Set(current).add(nextCategory));
+
+    if (category === nextCategory) {
+      setCategory(editorCategories.find((item) => item !== nextCategory) ?? '');
+    }
+  };
+
   const addTag = (nextTag: string): boolean => {
     const value = normalizeTaxonomyValue(nextTag);
     if (!value || tags.includes(value) || tags.length >= MAX_ARTICLE_TAGS) return false;
@@ -180,7 +244,7 @@ export function EditorPage() {
   const exactCategory = normalizeTaxonomyValue(categoryQuery);
   const canCreateCategory =
     exactCategory.length > 0 &&
-    !articleCategories.some((item) => item.toLowerCase() === exactCategory.toLowerCase());
+    !editorCategories.some((item) => item.toLowerCase() === exactCategory.toLowerCase());
 
   return (
     <section className={`editor-page ${isFullscreen ? 'is-fullscreen' : ''}`}>
@@ -278,15 +342,31 @@ export function EditorPage() {
                                 aria-label="可选择分类"
                               >
                                 {availableCategories.map((item) => (
-                                  <button
+                                  <div
                                     key={item}
-                                    type="button"
-                                    role="menuitem"
-                                    className={item === category ? 'active' : ''}
-                                    onClick={() => selectCategory(item)}
+                                    className={`editor-taxonomy-option ${
+                                      item === category ? 'active' : ''
+                                    }`}
                                   >
-                                    {item}
-                                  </button>
+                                    <button
+                                      type="button"
+                                      role="menuitem"
+                                      className="editor-taxonomy-option-label"
+                                      onClick={() => selectCategory(item)}
+                                    >
+                                      {item}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      role="menuitem"
+                                      className="editor-taxonomy-option-delete"
+                                      aria-label={`删除分类 ${item}`}
+                                      disabled={editorCategories.length <= 1}
+                                      onClick={() => deleteCategory(item)}
+                                    >
+                                      <X size={12} strokeWidth={2} aria-hidden="true" />
+                                    </button>
+                                  </div>
                                 ))}
 
                                 {canCreateCategory ? (
@@ -314,23 +394,75 @@ export function EditorPage() {
               </AnimatePresence>
             }
             title={
-              <motion.textarea
-                className="editor-title-input"
-                value={title}
-                placeholder="标题"
-                aria-label="文章标题"
-                rows={1}
-                ref={titleInputRef}
-                layout
-                transition={editorLayoutTransition}
-                onChange={(event) => setTitle(event.target.value)}
-                onTransitionEnd={resizeTitleInput}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                  }
-                }}
-              />
+              <div className="editor-title-stage">
+                <input
+                  id={coverInputId}
+                  ref={coverInputRef}
+                  className="editor-cover-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverChange}
+                />
+                <motion.textarea
+                  className="editor-title-input"
+                  value={title}
+                  placeholder="标题"
+                  aria-label="文章标题"
+                  rows={1}
+                  ref={titleInputRef}
+                  layout
+                  transition={editorLayoutTransition}
+                  onChange={(event) => setTitle(event.target.value)}
+                  onTransitionEnd={resizeTitleInput}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                    }
+                  }}
+                />
+                <AnimatePresence initial={false}>
+                  {!isFullscreen ? (
+                    <motion.div
+                      className="editor-cover-stage"
+                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                      animate={{ opacity: 1, height: 'auto', marginTop: 24 }}
+                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                      transition={editorLayoutTransition}
+                    >
+                      {coverImage ? (
+                        <figure className="editor-cover">
+                          <img src={coverImage} alt="文章封面" />
+                          <label
+                            className="editor-cover-action"
+                            htmlFor={coverInputId}
+                            aria-label="更换封面"
+                          >
+                            <span className="editor-cover-action-icon" aria-hidden="true">
+                              <Images size={20} strokeWidth={1.6} />
+                            </span>
+                            <span className="editor-cover-action-text">更换封面</span>
+                          </label>
+                        </figure>
+                      ) : (
+                        <label className="editor-cover-empty" htmlFor={coverInputId}>
+                          <img
+                            className="editor-cover-empty-art"
+                            src="/covers/upload-cover.png"
+                            alt=""
+                          />
+                          <span className="editor-cover-empty-title">上传封面</span>
+                          <small>支持 JPG、PNG、WebP，最大 5MB</small>
+                        </label>
+                      )}
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+                {coverError && !isFullscreen ? (
+                  <p className="editor-cover-error" role="alert">
+                    {coverError}
+                  </p>
+                ) : null}
+              </div>
             }
             headerAfter={
               <AnimatePresence initial={false} mode="sync">

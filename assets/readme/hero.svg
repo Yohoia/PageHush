@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" width="100%" role="img" aria-labelledby="pagehush-hero-title pagehush-hero-desc">
+  <title id="pagehush-hero-title">页息 PageHush：个人博客的 Markdown / MDX 写作工作台</title>
+  <desc id="pagehush-hero-desc">一个纸面质感的写作工作台，左侧是项目名称与核心能力，右侧用文章卡片和编辑纸面表现它的两种主要界面。</desc>
+  <rect width="1200" height="480" fill="#fcfcfa"/>
+  <g fill="#22231f" opacity=".035">
+    <rect x="52" y="42" width="1" height="396"/>
+    <rect x="1147" y="42" width="1" height="396"/>
+    <rect x="52" y="42" width="1096" height="1"/>
+  </g>
+
+  <g font-family="Inter, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif">
+    <g transform="translate(78 82)">
+      <rect width="16" height="2" fill="#607152"/>
+      <rect x="24" width="58" height="2" fill="#ddded4"/>
+      <rect x="90" width="16" height="2" fill="#ddded4"/>
+      <text x="0" y="26" fill="#607152" font-size="19" letter-spacing="7">PERSONAL BLOG STUDIO</text>
+    </g>
+
+    <text x="76" y="186" fill="#22231f" font-size="78" font-weight="650" letter-spacing="1">页息 PageHush</text>
+    <text x="80" y="248" fill="#454741" font-size="30" font-weight="500">个人博客的 Markdown / MDX 写作工作台</text>
+
+    <g font-size="20">
+      <g transform="translate(80 305)">
+        <rect width="151" height="42" rx="21" fill="#fffef9" stroke="#ddded4"/>
+        <text x="24" y="27" fill="#454741">文章画廊</text>
+      </g>
+      <g transform="translate(249 305)">
+        <rect width="170" height="42" rx="21" fill="#fffef9" stroke="#ddded4"/>
+        <text x="24" y="27" fill="#454741">Tiptap 编辑器</text>
+      </g>
+      <g transform="translate(437 305)">
+        <rect width="150" height="42" rx="21" fill="#fffef9" stroke="#ddded4"/>
+        <text x="24" y="27" fill="#454741">源文本优先</text>
+      </g>
+    </g>
+
+    <text x="80" y="406" fill="#72746d" font-size="19">React · Tiptap · Motion · Tailwind CSS · Fastify</text>
+    <text x="80" y="440" fill="#a1a39a" font-size="18">单人 · 单博客 · 首版 v0.1</text>
+  </g>
+
+  <g>
+    <g transform="translate(786 88)">
+      <rect width="300" height="184" rx="10" fill="#fffef9" stroke="#ddded4"/>
+      <text x="24" y="38" fill="#72746d" font-size="17" letter-spacing="2">ARTICLE GALLERY</text>
+      <g>
+        <rect x="24" y="64" width="112" height="82" rx="6" fill="#fcfcfa" stroke="#ddded4"/>
+        <path d="M24 88 L52 70 L76 88 L94 78 L136 96 L136 140 Q136 146 130 146 L30 146 Q24 146 24 140 Z" fill="#c9d2c1"/>
+        <rect x="35" y="102" width="54" height="6" rx="3" fill="#22231f"/>
+        <rect x="35" y="118" width="78" height="4" rx="2" fill="#ddded4"/>
+        <rect x="35" y="132" width="24" height="4" rx="2" fill="#607152"/>
+      </g>
+      <g>
+        <rect x="158" y="86" width="112" height="82" rx="6" fill="#fcfcfa" stroke="#ddded4"/>
+        <path d="M158 112 L182 94 L206 112 L226 100 L270 118 L270 162 Q270 168 264 168 L164 168 Q158 168 158 162 Z" fill="#d6dfe8"/>
+        <rect x="169" y="124" width="62" height="6" rx="3" fill="#22231f"/>
+        <rect x="169" y="140" width="70" height="4" rx="2" fill="#ddded4"/>
+        <rect x="169" y="154" width="24" height="4" rx="2" fill="#c08a45"/>
+      </g>
+    </g>
+
+    <g transform="translate(838 238)">
+      <rect width="322" height="188" rx="10" fill="#fffef9" stroke="#ddded4"/>
+      <text x="24" y="38" fill="#72746d" font-size="17" letter-spacing="2">WRITING EDITOR</text>
+      <rect x="24" y="58" width="274" height="106" rx="7" fill="#fcfcfa"/>
+      <rect x="42" y="82" width="180" height="12" rx="6" fill="#22231f"/>
+      <rect x="42" y="111" width="234" height="6" rx="3" fill="#d9dad2"/>
+      <rect x="42" y="130" width="214" height="6" rx="3" fill="#d9dad2"/>
+      <rect x="42" y="149" width="189" height="6" rx="3" fill="#d9dad2"/>
+      <circle cx="282" cy="46" r="4" fill="#607152"/>
+      <rect x="42" y="178" width="72" height="22" rx="5" fill="#e6e7de"/>
+      <rect x="124" y="178" width="72" height="22" rx="5" fill="#e6e7de"/>
+      <rect x="206" y="178" width="72" height="22" rx="5" fill="#e6e7de"/>
+    </g>
+  </g>
+</svg>

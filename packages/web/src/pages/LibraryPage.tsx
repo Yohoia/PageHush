@@ -31,7 +31,7 @@ export function LibraryPage() {
   };
 
   return (
-    <section className="page-wide pb-32 pt-8">
+    <section className="page-wide pb-32 pt-4">
       <div className="article-controls">
         <p className="article-count" aria-live="polite">
           <strong>{String(visibleArticles.length).padStart(2, '0')}</strong>

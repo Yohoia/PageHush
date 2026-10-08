@@ -9,6 +9,7 @@ export default tseslint.config(
       '**/node_modules/**',
       'design/writing/vendor/**',
       'design/writing/evidence/**',
+      'design-task/**',
       'packages/web/public/**',
     ],
   },
