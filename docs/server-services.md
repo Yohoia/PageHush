@@ -27,6 +27,24 @@
 
 该文件权限为 root/pagehush 组可读，不进入 Git 仓库。
 
+## 发布目录与软链接策略
+
+PageHush 和 Astro 博客一样使用 `releases/current` 发布结构，但 PageHush 分为前端和 API 两套发布目录：
+
+```text
+/var/www/pagehush/releases/YYYYMMDDHHMMSS   # 前端静态资源
+/var/www/pagehush/current                   # 指向前端当前版本
+/opt/pagehush/releases/YYYYMMDDHHMMSS       # API 运行文件
+/opt/pagehush/current                       # 指向 API 当前版本
+```
+
+- 版本目录使用纯时间戳命名，格式为 `YYYYMMDDHHMMSS`；
+- Nginx 的前端 root 使用 `/var/www/pagehush/current`；
+- systemd API 服务的工作目录使用 `/opt/pagehush/current`；
+- 发布时先创建新的时间戳目录，确认内容完整后原子切换 `current`；
+- API 切换后重启 `pagehush-api`，前端切换后按需 reload Nginx；
+- 旧版本目录保留用于快速回滚。
+
 ## 访问认证
 
 PageHush 使用单人访问码登录，不再依赖 Nginx Basic Auth。
@@ -107,7 +125,7 @@ packages/api/src/db/schema.ts
 首批表：
 
 - `articles`
-- `categories`
+- `topics`
 - `tags`
 - `article_tags`
 - `assets`
@@ -125,7 +143,7 @@ npm run db:migrate
 npm run db:seed
 ```
 
-`db:seed` 会把当前演示文章、分类和标签写入 PostgreSQL。它是幂等的：重复执行会按 slug 更新文章，并重建文章标签关联。
+`db:seed` 会把当前演示文章、主题和标签写入 PostgreSQL。它是幂等的：重复执行会按 slug 更新文章，并重建文章标签关联。
 
 ## 对象存储
 
@@ -183,4 +201,4 @@ MinIO 备份会短暂停止 MinIO 容器，完成后自动启动。当前资源�
 - 不要把 `/opt/pagehush/shared/services.env` 提交到仓库；
 - 更新镜像时保持 digest 固定，先在测试环境验证；
 - 备份已按上表配置，仍需定期把备份同步到服务器之外并演练恢复；
-- 当前 API 仍在本地运行，服务器部署与 Nginx 反代是下一阶段工作。
+- 当前 API 已由 systemd 运行，并通过 Nginx 反代到 `127.0.0.1:8787`。
