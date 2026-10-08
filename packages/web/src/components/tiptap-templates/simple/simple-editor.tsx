@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { EditorContent, EditorContext, useEditor } from '@tiptap/react';
-import { AnimatePresence, motion } from 'motion/react';
 
 // --- Tiptap Core Extensions ---
 import { StarterKit } from '@tiptap/starter-kit';
@@ -66,12 +65,18 @@ import { useIsBreakpoint } from '@/hooks/use-is-breakpoint';
 import { ThemeToggle } from '@/components/tiptap-templates/simple/theme-toggle';
 
 // --- Lib ---
-import { handleImageUpload, MAX_FILE_SIZE } from '@/lib/tiptap-utils';
+import { MAX_FILE_SIZE } from '@/lib/tiptap-utils';
 
 // --- Styles ---
 import '@/components/tiptap-templates/simple/simple-editor.scss';
 
 import content from '@/components/tiptap-templates/simple/data/content.json';
+
+export interface SimpleEditorSlots {
+  toolbar: ReactNode;
+  search: ReactNode;
+  content: ReactNode;
+}
 
 export interface SimpleEditorProps {
   content?: Parameters<typeof useEditor>[0]['content'];
@@ -79,7 +84,7 @@ export interface SimpleEditorProps {
   onCreate?: (editor: ReturnType<typeof useEditor>) => void;
   onUpdate?: (editor: ReturnType<typeof useEditor>) => void;
   ariaLabel?: string;
-  fullscreenTitle?: ReactNode;
+  children?: (slots: SimpleEditorSlots) => ReactNode;
 }
 
 const SEARCH_AND_REPLACE_SCROLL_OPTIONS: ScrollIntoViewOptions = {
@@ -197,11 +202,11 @@ const MobileToolbarContent = ({
 
 export function SimpleEditor({
   content: providedContent = content,
-  fullscreenTitle,
   contentType = 'json',
   onCreate,
   onUpdate,
   ariaLabel = 'Main content area, start typing to enter text.',
+  children,
 }: SimpleEditorProps) {
   const isMobile = useIsBreakpoint();
   const [mobileView, setMobileView] = useState<'main' | 'highlighter' | 'link'>('main');
@@ -249,8 +254,6 @@ export function SimpleEditor({
         accept: 'image/*',
         maxSize: MAX_FILE_SIZE,
         limit: 3,
-        upload: handleImageUpload,
-        onError: (error) => console.error('Upload failed:', error),
       }),
     ],
     content: providedContent,
@@ -284,53 +287,51 @@ export function SimpleEditor({
     openSearchAndReplace();
   }, [closeSearchAndReplace, isSearchAndReplaceOpen, openSearchAndReplace]);
 
+  const slots: SimpleEditorSlots = {
+    toolbar: (
+      <Toolbar ref={toolbarRef} variant="floating" className="simple-editor-toolbar">
+        {mobileView === 'main' ? (
+          <MainToolbarContent
+            onHighlighterClick={() => setMobileView('highlighter')}
+            onLinkClick={() => setMobileView('link')}
+            onSearchAndReplaceClick={toggleSearchAndReplace}
+            isSearchAndReplaceOpen={isSearchAndReplaceOpen}
+            searchAndReplaceButtonRef={searchAndReplaceButtonRef}
+            isMobile={isMobile}
+          />
+        ) : (
+          <MobileToolbarContent
+            type={mobileView === 'highlighter' ? 'highlighter' : 'link'}
+            onBack={() => setMobileView('main')}
+          />
+        )}
+      </Toolbar>
+    ),
+    search: (
+      <SearchAndReplace
+        className="simple-editor-search-and-replace"
+        open={isSearchAndReplaceOpen}
+        onOpen={openSearchAndReplace}
+        onClose={closeSearchAndReplace}
+        scrollIntoViewOptions={SEARCH_AND_REPLACE_SCROLL_OPTIONS}
+      />
+    ),
+    content: (
+      <EditorContent editor={editor} role="presentation" className="simple-editor-content" />
+    ),
+  };
+
   return (
-    <div className="simple-editor-wrapper">
-      <EditorContext.Provider value={{ editor }}>
-        <motion.div className="simple-editor-toolbar-stage" layout="position">
-          <Toolbar ref={toolbarRef} variant="floating" className="simple-editor-toolbar">
-            {mobileView === 'main' ? (
-              <MainToolbarContent
-                onHighlighterClick={() => setMobileView('highlighter')}
-                onLinkClick={() => setMobileView('link')}
-                onSearchAndReplaceClick={toggleSearchAndReplace}
-                isSearchAndReplaceOpen={isSearchAndReplaceOpen}
-                searchAndReplaceButtonRef={searchAndReplaceButtonRef}
-                isMobile={isMobile}
-              />
-            ) : (
-              <MobileToolbarContent
-                type={mobileView === 'highlighter' ? 'highlighter' : 'link'}
-                onBack={() => setMobileView('main')}
-              />
-            )}
-          </Toolbar>
-        </motion.div>
-
-        <AnimatePresence initial={false} mode="wait">
-          {fullscreenTitle ? (
-            <motion.div
-              className="simple-editor-fullscreen-title-stage"
-              initial={{ opacity: 0, y: -12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-            >
-              {fullscreenTitle}
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-
-        <SearchAndReplace
-          className="simple-editor-search-and-replace"
-          open={isSearchAndReplaceOpen}
-          onOpen={openSearchAndReplace}
-          onClose={closeSearchAndReplace}
-          scrollIntoViewOptions={SEARCH_AND_REPLACE_SCROLL_OPTIONS}
-        />
-
-        <EditorContent editor={editor} role="presentation" className="simple-editor-content" />
-      </EditorContext.Provider>
-    </div>
+    <EditorContext.Provider value={{ editor }}>
+      {children ? (
+        children(slots)
+      ) : (
+        <div className="simple-editor-wrapper">
+          <div className="simple-editor-toolbar-stage">{slots.toolbar}</div>
+          {slots.search}
+          <div className="simple-editor-content-stage">{slots.content}</div>
+        </div>
+      )}
+    </EditorContext.Provider>
   );
 }

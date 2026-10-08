@@ -2,12 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUpRight, Plus } from 'lucide-react';
-import {
-  articleCategories,
-  articleStatusLabels,
-  articles,
-  type ArticleStatus,
-} from '@/data/articles';
+import { articleCategories, articles, getArticleDisplayStatus } from '@/data/articles';
 
 export function LibraryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -97,8 +92,11 @@ export function LibraryPage() {
                   />
                   <div className="article-card-meta">
                     <span className="article-card-category">{article.category}</span>
-                    <span className="article-card-status" data-status={article.status}>
-                      {articleStatusLabels[article.status as ArticleStatus]}
+                    <span
+                      className="article-card-status"
+                      data-status={getArticleDisplayStatus(article).status}
+                    >
+                      {getArticleDisplayStatus(article).label}
                     </span>
                   </div>
                   <h2 className="article-card-title">{article.title}</h2>

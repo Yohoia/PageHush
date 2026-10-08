@@ -76,26 +76,32 @@ test('editor fills the screen and enters Motion fullscreen mode', async ({ page 
     .evaluate((toolbar) => toolbar.getBoundingClientRect().top);
   await expect(page.locator('.lucide-maximize')).toBeVisible();
   await page.getByRole('button', { name: '进入全屏' }).click();
-  await page.waitForTimeout(450);
 
   await expect(page.getByRole('button', { name: /随笔 · ESSAY/ })).toHaveCount(0);
-  await expect(page.getByLabel('文章标题')).toHaveCount(0);
   await expect(page.locator('.editor-metadata')).toHaveCount(0);
-  await expect(
-    page.getByRole('heading', { name: '一个人走路时，世界会悄悄变得温柔' }),
-  ).toBeVisible();
+  const fullscreenTitle = page.getByLabel('文章标题');
+  await expect(fullscreenTitle).toBeVisible();
+  await expect(fullscreenTitle).toHaveValue('一个人走路时，世界会悄悄变得温柔');
+  await expect(fullscreenTitle).toHaveCSS('font-size', '28px');
+  await expect(page.getByRole('heading', { name: '一个人走路时，世界会悄悄变得温柔' })).toHaveCount(
+    0,
+  );
   await expect(page.getByRole('button', { name: '退出全屏' })).toBeVisible();
 
-  const fullscreenToolbarTop = await page
-    .getByRole('toolbar')
-    .evaluate((toolbar) => toolbar.getBoundingClientRect().top);
-  expect(fullscreenToolbarTop).toBeLessThan(initialToolbarTop);
+  await expect
+    .poll(
+      async () =>
+        page.getByRole('toolbar').evaluate((toolbar) => toolbar.getBoundingClientRect().top),
+      { timeout: 3_000 },
+    )
+    .toBeLessThan(20);
+  expect(initialToolbarTop).toBeGreaterThan(20);
   expect(await page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
   await expect(page.locator('.lucide-minimize')).toBeVisible();
 
   await page.getByRole('button', { name: '退出全屏' }).click();
-  await page.waitForTimeout(350);
   await expect(page.getByRole('button', { name: /随笔 · ESSAY/ })).toBeVisible();
+  await expect(page.getByLabel('文章标题')).toHaveCSS('font-size', '32px');
   expect(await page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
 });
 

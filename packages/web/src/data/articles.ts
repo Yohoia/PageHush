@@ -1,4 +1,6 @@
-export type ArticleStatus = 'draft' | 'modified' | 'published';
+import type { ArticleStatus } from '@pagehush/shared';
+
+export type { ArticleStatus };
 
 export const MAX_ARTICLE_TAGS = 3;
 
@@ -13,6 +15,7 @@ export interface Article {
   readingTime: string;
   tags: string[];
   status: ArticleStatus;
+  hasUnpublishedChanges?: boolean;
   markdown: string;
 }
 
@@ -39,7 +42,8 @@ export const articles: Article[] = [
     publishedAt: '2024-03-08',
     readingTime: '8 分钟阅读',
     tags: ['独处', '城市', '散步'],
-    status: 'modified',
+    status: 'draft',
+    hasUnpublishedChanges: true,
     markdown: [
       '在独处的行走中，城市的噪音渐渐退去，我们重新听见内心的声音。',
       '',
@@ -107,7 +111,8 @@ export const articles: Article[] = [
     publishedAt: '2024-02-20',
     readingTime: '9 分钟阅读',
     tags: ['写作', '秩序', '思考'],
-    status: 'modified',
+    status: 'draft',
+    hasUnpublishedChanges: true,
     markdown: [
       '写作不是为了被看见，而是为了看见自己。在文字里，我们整理思绪，也安放情绪。',
       '',
@@ -172,9 +177,21 @@ export const articleTags = [...new Set(articles.flatMap((article) => article.tag
 
 export const articleStatusLabels: Record<ArticleStatus, string> = {
   draft: '草稿',
-  modified: '草稿',
+  scheduled: '定时',
   published: '已发布',
+  trashed: '回收站',
 };
+
+export function getArticleDisplayStatus(article: Article): {
+  status: ArticleStatus | 'modified';
+  label: string;
+} {
+  if (article.hasUnpublishedChanges) {
+    return { status: 'modified', label: '草稿' };
+  }
+
+  return { status: article.status, label: articleStatusLabels[article.status] };
+}
 
 export const defaultArticleMarkdown = [
   '午后的光落在桌面上，杯里的茶已经凉了。我关掉几个不停闪动的窗口，打开一张空白的纸。',

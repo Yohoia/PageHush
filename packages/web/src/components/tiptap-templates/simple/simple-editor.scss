@@ -60,18 +60,13 @@ body,
   overflow: visible;
   display: flex;
   flex-direction: column;
-  gap: 2.25rem;
+  gap: 0;
 }
 
 .simple-editor-toolbar-stage {
   display: flex;
   width: 100%;
   justify-content: center;
-}
-
-.simple-editor-fullscreen-title-stage {
-  width: min(760px, 100%);
-  margin: 1.25rem auto 0;
 }
 
 .simple-editor-toolbar {
@@ -124,7 +119,7 @@ body,
   }
 
   .simple-editor-wrapper {
-    gap: 1.5rem;
+    gap: 0;
   }
 
   .simple-editor-content .tiptap.ProseMirror.simple-editor {

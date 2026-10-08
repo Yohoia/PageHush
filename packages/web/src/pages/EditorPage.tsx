@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { ArrowLeft, ChevronDown, Maximize, Minimize, Plus, X } from 'lucide-react';
+import { EditorLayout } from '@/components/EditorLayout';
 import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
 import {
   articleCategories,
@@ -10,6 +11,7 @@ import {
 } from '@/data/articles';
 import { useNavigate, useParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
+import { editorLayoutTransition } from '../motionPresets';
 
 const newArticle = {
   title: '把日子，写慢一点',
@@ -59,6 +61,32 @@ export function EditorPage() {
   const categoryButtonRef = useRef<HTMLButtonElement>(null);
   const categoryMenuRef = useRef<HTMLDivElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLTextAreaElement>(null);
+
+  const supportsFieldSizing = () =>
+    typeof CSS !== 'undefined' && CSS.supports('field-sizing: content');
+
+  const resizeTitleInput = useCallback(() => {
+    const input = titleInputRef.current;
+    if (!input) return;
+
+    input.style.height = 'auto';
+    input.style.height = `${input.scrollHeight}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    if (supportsFieldSizing()) return;
+
+    resizeTitleInput();
+  }, [isFullscreen, resizeTitleInput, title]);
+
+  useEffect(() => {
+    if (supportsFieldSizing()) return;
+
+    const handleResize = () => resizeTitleInput();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [resizeTitleInput]);
 
   const availableCategories = useMemo(() => {
     const base = articleCategories.filter((item) => item !== '全部');
@@ -113,6 +141,8 @@ export function EditorPage() {
   }, []);
 
   const toggleFullscreen = () => {
+    setIsCategoryMenuOpen(false);
+    setIsTagInputVisible(false);
     setIsFullscreen((current) => !current);
   };
 
@@ -185,177 +215,211 @@ export function EditorPage() {
         )}
       </motion.button>
 
-      <AnimatePresence initial={false} mode="wait">
-        {isFullscreen ? null : (
-          <motion.div
-            className="editor-header-stage"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
-          >
-            <div className="page-content editor-page-content">
-              <div className="editor-taxonomy">
-                <div className="editor-category-picker">
-                  <button
-                    ref={categoryButtonRef}
-                    type="button"
-                    className="editor-category-button"
-                    aria-haspopup="menu"
-                    aria-expanded={isCategoryMenuOpen}
-                    onClick={() => {
-                      setIsCategoryMenuOpen((open) => !open);
-                      setIsTagInputVisible(false);
-                    }}
+      <SimpleEditor
+        content={articleMarkdown}
+        contentType="markdown"
+        ariaLabel="正文编辑区"
+        onUpdate={handleEditorUpdate}
+      >
+        {({ toolbar, search, content }) => (
+          <EditorLayout
+            isFullscreen={isFullscreen}
+            toolbar={toolbar}
+            search={search}
+            headerBefore={
+              <AnimatePresence initial={false} mode="sync">
+                {isFullscreen ? null : (
+                  <motion.div
+                    className="editor-header-stage editor-header-before"
+                    layout="position"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={editorLayoutTransition}
                   >
-                    {category} · ESSAY
-                    <ChevronDown size={14} strokeWidth={1.8} aria-hidden="true" />
-                  </button>
-
-                  {isCategoryMenuOpen ? (
-                    <div ref={categoryMenuRef} className="editor-taxonomy-menu" role="menu">
-                      <label className="editor-taxonomy-field">
-                        <span>搜索或创建分类</span>
-                        <input
-                          value={categoryQuery}
-                          placeholder="输入分类名称"
-                          onChange={(event) => setCategoryQuery(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              event.preventDefault();
-                              selectCategory(availableCategories[0] ?? exactCategory);
-                            }
-                          }}
-                        />
-                      </label>
-
-                      <div className="editor-taxonomy-options" role="group" aria-label="可选择分类">
-                        {availableCategories.map((item) => (
+                    <div className="page-content editor-page-content">
+                      <div className="editor-taxonomy">
+                        <div className="editor-category-picker">
                           <button
-                            key={item}
+                            ref={categoryButtonRef}
                             type="button"
-                            role="menuitem"
-                            className={item === category ? 'active' : ''}
-                            onClick={() => selectCategory(item)}
+                            className="editor-category-button"
+                            aria-haspopup="menu"
+                            aria-expanded={isCategoryMenuOpen}
+                            onClick={() => {
+                              setIsCategoryMenuOpen((open) => !open);
+                              setIsTagInputVisible(false);
+                            }}
                           >
-                            {item}
+                            {category} · ESSAY
+                            <ChevronDown size={14} strokeWidth={1.8} aria-hidden="true" />
                           </button>
-                        ))}
 
-                        {canCreateCategory ? (
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="create"
-                            onClick={() => selectCategory(exactCategory)}
-                          >
-                            创建「{exactCategory}」并使用
-                          </button>
-                        ) : null}
+                          {isCategoryMenuOpen ? (
+                            <div ref={categoryMenuRef} className="editor-taxonomy-menu" role="menu">
+                              <label className="editor-taxonomy-field">
+                                <span>搜索或创建分类</span>
+                                <input
+                                  value={categoryQuery}
+                                  placeholder="输入分类名称"
+                                  onChange={(event) => setCategoryQuery(event.target.value)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                      event.preventDefault();
+                                      selectCategory(availableCategories[0] ?? exactCategory);
+                                    }
+                                  }}
+                                />
+                              </label>
 
-                        {availableCategories.length === 0 && !canCreateCategory ? (
-                          <span className="editor-taxonomy-empty">没有找到分类</span>
-                        ) : null}
+                              <div
+                                className="editor-taxonomy-options"
+                                role="group"
+                                aria-label="可选择分类"
+                              >
+                                {availableCategories.map((item) => (
+                                  <button
+                                    key={item}
+                                    type="button"
+                                    role="menuitem"
+                                    className={item === category ? 'active' : ''}
+                                    onClick={() => selectCategory(item)}
+                                  >
+                                    {item}
+                                  </button>
+                                ))}
+
+                                {canCreateCategory ? (
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    className="create"
+                                    onClick={() => selectCategory(exactCategory)}
+                                  >
+                                    创建「{exactCategory}」并使用
+                                  </button>
+                                ) : null}
+
+                                {availableCategories.length === 0 && !canCreateCategory ? (
+                                  <span className="editor-taxonomy-empty">没有找到分类</span>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <input
-                className="mt-5 w-full bg-transparent text-center font-serif text-[48px] font-medium leading-[1.18] tracking-[-0.02em] outline-none placeholder:text-faint sm:text-[54px]"
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            }
+            title={
+              <motion.textarea
+                className="editor-title-input"
                 value={title}
                 placeholder="标题"
                 aria-label="文章标题"
+                rows={1}
+                ref={titleInputRef}
+                layout
+                transition={editorLayoutTransition}
                 onChange={(event) => setTitle(event.target.value)}
+                onTransitionEnd={resizeTitleInput}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                  }
+                }}
               />
+            }
+            headerAfter={
+              <AnimatePresence initial={false} mode="sync">
+                {isFullscreen ? null : (
+                  <motion.div
+                    className="editor-header-stage editor-header-after"
+                    layout="position"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={editorLayoutTransition}
+                  >
+                    <div className="page-content editor-page-content">
+                      <div className="editor-metadata">
+                        <time dateTime={article.publishedAt}>{article.publishedAt}</time>
+                        <span aria-hidden="true">·</span>
+                        <span>{characterCount} 字</span>
 
-              <div className="editor-metadata">
-                <time dateTime={article.publishedAt}>{article.publishedAt}</time>
-                <span aria-hidden="true">·</span>
-                <span>{characterCount} 字</span>
+                        <div className="editor-tags" aria-label="文章标签">
+                          {tags.map((tag) => (
+                            <span key={tag} className="editor-tag">
+                              <span className="editor-tag-label">#{tag}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeTag(tag)}
+                                aria-label={`移除标签 ${tag}`}
+                              >
+                                <X size={12} strokeWidth={2} aria-hidden="true" />
+                              </button>
+                            </span>
+                          ))}
 
-                <div className="editor-tags" aria-label="文章标签">
-                  {tags.map((tag) => (
-                    <span key={tag} className="editor-tag">
-                      <span className="editor-tag-label">#{tag}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        aria-label={`移除标签 ${tag}`}
-                      >
-                        <X size={12} strokeWidth={2} aria-hidden="true" />
-                      </button>
-                    </span>
-                  ))}
+                          {tags.length < MAX_ARTICLE_TAGS ? (
+                            <div className="editor-tag-picker">
+                              {isTagInputVisible ? (
+                                <input
+                                  ref={tagInputRef}
+                                  className="editor-tag-input"
+                                  value={tagQuery}
+                                  placeholder="标签"
+                                  aria-label="新增标签"
+                                  onBlur={() => setIsTagInputVisible(false)}
+                                  onChange={(event) => setTagQuery(event.target.value)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Escape') {
+                                      event.preventDefault();
+                                      setIsTagInputVisible(false);
+                                      return;
+                                    }
 
-                  {tags.length < MAX_ARTICLE_TAGS ? (
-                    <div className="editor-tag-picker">
-                      {isTagInputVisible ? (
-                        <input
-                          ref={tagInputRef}
-                          className="editor-tag-input"
-                          value={tagQuery}
-                          placeholder="标签"
-                          aria-label="新增标签"
-                          onBlur={() => setIsTagInputVisible(false)}
-                          onChange={(event) => setTagQuery(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Escape') {
-                              event.preventDefault();
-                              setIsTagInputVisible(false);
-                              return;
-                            }
+                                    if (event.key !== 'Enter') return;
 
-                            if (event.key !== 'Enter') return;
+                                    event.preventDefault();
+                                    if (addTag(tagQuery)) {
+                                      setIsTagInputVisible(false);
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="editor-add-tag"
+                                  aria-expanded={isTagInputVisible}
+                                  onClick={() => {
+                                    setIsTagInputVisible(true);
+                                    setTagQuery('');
+                                    setIsCategoryMenuOpen(false);
+                                  }}
+                                >
+                                  <Plus size={12} strokeWidth={2} aria-hidden="true" />
+                                  标签
+                                </button>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
 
-                            event.preventDefault();
-                            if (addTag(tagQuery)) {
-                              setIsTagInputVisible(false);
-                            }
-                          }}
-                        />
-                      ) : (
-                        <button
-                          type="button"
-                          className="editor-add-tag"
-                          aria-expanded={isTagInputVisible}
-                          onClick={() => {
-                            setIsTagInputVisible(true);
-                            setTagQuery('');
-                            setIsCategoryMenuOpen(false);
-                          }}
-                        >
-                          <Plus size={12} strokeWidth={2} aria-hidden="true" />
-                          标签
-                        </button>
-                      )}
+                      <div className="mt-3 h-px bg-line md:mt-4" aria-hidden="true" />
                     </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="mt-3 h-px bg-line md:mt-4" aria-hidden="true" />
-            </div>
-          </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            }
+          >
+            {content}
+          </EditorLayout>
         )}
-      </AnimatePresence>
-
-      <motion.div
-        className="editor-body-stage"
-        layout="position"
-        transition={{ duration: 0.32, ease: [0.22, 0.7, 0.26, 1] }}
-      >
-        <SimpleEditor
-          content={articleMarkdown}
-          contentType="markdown"
-          ariaLabel="正文编辑区"
-          onUpdate={handleEditorUpdate}
-          fullscreenTitle={
-            isFullscreen ? <h1 className="editor-fullscreen-title">{title}</h1> : undefined
-          }
-        />
-      </motion.div>
+      </SimpleEditor>
     </section>
   );
 }
