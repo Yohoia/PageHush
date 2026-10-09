@@ -1,0 +1,462 @@
+.compact-toc {
+  --compact-accent: #607152;
+  --compact-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  display: none;
+  color: var(--color-ink);
+  font-family: var(--font-serif);
+  font-variant-numeric: tabular-nums;
+}
+.dark .compact-toc {
+  --compact-accent: #9faf8f;
+}
+
+@media (max-width: 1199px) {
+  .editor-soft-toc.has-compact-layout {
+    display: none;
+  }
+  .compact-toc {
+    display: block;
+    position: fixed;
+    z-index: 40;
+  }
+  .compact-toc button {
+    cursor: pointer;
+    font: inherit;
+  }
+  .compact-toc :is(button, input):focus-visible {
+    outline: 2px solid var(--compact-accent);
+    outline-offset: 3px;
+  }
+  .compact-toc-panel {
+    position: absolute;
+    padding: 10px 16px 16px;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background: var(--color-paper);
+    box-shadow: 0 8px 28px color-mix(in srgb, var(--color-ink) 8%, transparent);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 180ms ease,
+      translate 220ms var(--compact-ease),
+      visibility 0s 220ms;
+  }
+  .compact-toc.is-expanded .compact-toc-panel {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    translate: 0 0;
+    transition:
+      opacity 280ms ease,
+      translate 300ms var(--compact-ease),
+      visibility 0s;
+  }
+  .compact-toc-panel header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    color: var(--color-muted);
+    font-size: 12px;
+  }
+  .compact-toc-panel header > span:first-child {
+    color: var(--compact-accent);
+    letter-spacing: 0.2em;
+  }
+  .compact-toc-panel-progress {
+    margin-left: auto;
+    font-size: 11px;
+  }
+  .compact-toc-panel header > button {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 40px;
+    margin-right: -8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-muted);
+  }
+  .compact-toc-panel ol {
+    max-height: min(48dvh, 430px);
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
+  .compact-toc-panel li[data-level='3'] {
+    padding-left: 14px;
+  }
+  .compact-toc-panel li button {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-muted);
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .compact-toc-panel li button > span:last-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .compact-toc-panel li button.is-active {
+    color: var(--color-ink);
+    font-weight: 550;
+  }
+  .compact-toc-panel li button.is-active .compact-toc-number {
+    color: var(--compact-accent);
+  }
+  .compact-toc-number {
+    flex-shrink: 0;
+    color: var(--color-faint);
+    font-size: 10px;
+    font-weight: 400;
+  }
+  .compact-toc-top {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-muted);
+    border-radius: 50%;
+  }
+  .compact-toc-top:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+  .compact-toc-top > svg {
+    transition: transform 420ms cubic-bezier(0.34, 1.4, 0.64, 1);
+  }
+  .compact-toc-top:is(:hover, :focus-visible):not(:disabled) {
+    background: var(--color-hover);
+    color: var(--color-ink);
+  }
+  .compact-toc-top:is(:hover, :focus-visible):not(:disabled) > svg {
+    transform: translateY(-2px);
+  }
+  .compact-toc-top.is-returning > svg {
+    animation: soft-toc-return 420ms var(--compact-ease);
+  }
+  .compact-toc-entry {
+    border: 0;
+    background: transparent;
+    color: var(--color-ink);
+  }
+  .compact-toc-reading {
+    height: 2px;
+    overflow: hidden;
+    background: var(--color-line);
+  }
+  .compact-toc-reading > span {
+    display: block;
+    height: 100%;
+    background: var(--compact-accent);
+    transition: width 160ms ease-out;
+  }
+  .compact-current-number {
+    flex-shrink: 0;
+    color: var(--compact-accent);
+    font-size: 12px;
+  }
+  .compact-current-number > span {
+    color: var(--color-faint);
+    font-size: 10px;
+  }
+  .compact-current-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .compact-toc-entry > svg:not(.compact-edge-strand) {
+    flex-shrink: 0;
+    color: var(--color-faint);
+    transition: rotate 240ms var(--compact-ease);
+  }
+  .compact-toc.is-expanded .compact-toc-entry > svg:not(.compact-edge-strand) {
+    rotate: 180deg;
+  }
+
+  /* 01: the soft strand itself becomes a bookmark at the viewport edge. */
+  .compact-toc-edge {
+    top: 48%;
+    right: max(0px, env(safe-area-inset-right));
+    width: 44px;
+    transform: translateY(-50%);
+  }
+  .compact-toc-edge .compact-toc-entry,
+  .compact-toc-empty-strand {
+    position: relative;
+    display: block;
+    width: 44px;
+    height: 168px;
+    padding: 4px 2px 4px 18px;
+    border-radius: 22px;
+    touch-action: pan-y;
+  }
+  .compact-edge-strand {
+    display: block;
+    width: 24px;
+    height: 160px;
+    overflow: visible;
+  }
+  .compact-edge-strand path {
+    fill: none;
+    stroke-width: 1.3;
+    stroke-linecap: round;
+    animation: compact-strand-drift 4s ease-in-out infinite;
+  }
+  .compact-strand-base {
+    stroke: var(--color-line);
+  }
+  .compact-strand-read {
+    stroke: var(--compact-accent);
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    transition:
+      stroke-dashoffset 160ms ease-out,
+      opacity 160ms ease;
+  }
+  .compact-toc-edge .compact-toc-reading {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .compact-toc-edge .compact-toc-top {
+    position: relative;
+    padding-left: 16px;
+  }
+  .compact-toc-edge .compact-toc-top::before {
+    content: '';
+    position: absolute;
+    inset: 8px 0 8px 16px;
+    border: 1px solid var(--color-line);
+    border-radius: 50%;
+    background: var(--color-paper);
+    z-index: -1;
+  }
+  .compact-toc-edge .compact-toc-panel {
+    width: min(290px, calc(100vw - 64px));
+    right: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    translate: 12px 0;
+  }
+  .compact-toc-edge.is-expanded .compact-toc-panel {
+    translate: 0 0;
+  }
+  .compact-toc-edge.is-expanded .compact-edge-strand path {
+    animation-play-state: paused;
+  }
+  .compact-toc-edge.is-empty .compact-toc-top {
+    margin-top: 0;
+  }
+
+  /* 02: a single line of the current chapter replaces the stacked buttons. */
+  .compact-toc-footer {
+    right: 0;
+    left: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 58px;
+    padding: 4px max(12px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom))
+      max(20px, env(safe-area-inset-left));
+    background: var(--color-paper);
+  }
+  .compact-toc-footer .compact-toc-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0;
+    text-align: left;
+    touch-action: pan-x;
+  }
+  .compact-toc-footer .compact-toc-entry > .compact-current-title {
+    flex: 1;
+  }
+  .compact-toc-footer .compact-toc-reading {
+    position: absolute;
+    inset: 0 0 auto;
+  }
+  .compact-toc-footer .compact-toc-panel {
+    left: 12px;
+    right: 12px;
+    bottom: calc(100% + 10px);
+    translate: 0 12px;
+  }
+  .compact-toc-footer .compact-toc-top {
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+
+  /* 03: directly scrub chapters on a horizontal strand, with a full index as a fallback. */
+  .compact-toc-scrub {
+    right: 16px;
+    left: 16px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    column-gap: 10px;
+    padding: 8px 12px 6px 16px;
+    border-radius: 12px;
+    background: var(--color-paper);
+    box-shadow: 0 2px 14px color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+  .compact-toc-scrub .compact-toc-entry {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 30px;
+    padding: 0;
+    text-align: left;
+    touch-action: pan-x;
+  }
+  .compact-toc-scrub .compact-current-number > span {
+    display: none;
+  }
+  .compact-toc-scrub .compact-current-title {
+    flex: 1;
+  }
+  .compact-toc-scrub .compact-toc-top {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+  .compact-toc-scrub-track {
+    position: relative;
+    height: 38px;
+    margin: 0 5px;
+  }
+  .compact-toc-scrub-track svg {
+    position: absolute;
+    top: 4px;
+    left: 0;
+    width: 100%;
+    height: 28px;
+    overflow: visible;
+  }
+  .compact-strand-horizontal {
+    fill: none;
+    stroke: var(--color-line);
+    stroke-width: 1.3;
+    vector-effect: non-scaling-stroke;
+    animation: compact-horizontal-drift 4s ease-in-out infinite;
+  }
+  .compact-toc-knob {
+    position: absolute;
+    top: 13px;
+    width: 8px;
+    height: 8px;
+    margin-left: -4px;
+    border-radius: 50%;
+    background: var(--compact-accent);
+    transition:
+      left 250ms var(--compact-ease),
+      scale 180ms ease;
+    pointer-events: none;
+  }
+  .compact-toc-scrub.is-scrubbing .compact-toc-knob {
+    scale: 1.45;
+    transition: scale 180ms ease;
+  }
+  .compact-toc-scrub-track input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 38px;
+    margin: 0;
+    opacity: 0;
+    cursor: ew-resize;
+    touch-action: pan-y;
+  }
+  .compact-toc-scrub-track:has(input:focus-visible) {
+    outline: 2px solid var(--compact-accent);
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+  .compact-toc-scrub .compact-toc-reading {
+    grid-column: 1 / 3;
+    height: 1px;
+    margin-top: 3px;
+  }
+  .compact-toc-scrub .compact-toc-panel {
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 12px);
+    translate: 0 12px;
+  }
+  .compact-toc-scrub.is-empty .compact-toc-top {
+    grid-row: 1;
+  }
+  .compact-toc.is-paused .compact-edge-strand path {
+    animation-play-state: paused;
+  }
+  .compact-toc:is(.is-paused, .is-scrubbing) .compact-strand-horizontal {
+    animation-play-state: paused;
+  }
+}
+
+@media (max-width: 1199px) and (max-height: 650px) {
+  .compact-toc-edge {
+    top: calc((100dvh + var(--editor-header-effective-height, 118px)) / 2);
+  }
+  .compact-toc-edge .compact-toc-panel ol {
+    max-height: min(48dvh, calc(100dvh - var(--editor-header-effective-height, 118px) - 144px));
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .compact-toc:is(.compact-toc-footer, .compact-toc-scrub) {
+    left: max(20px, calc(50vw - 380px));
+    right: max(20px, calc(50vw - 380px));
+  }
+}
+
+@keyframes compact-horizontal-drift {
+  0%,
+  100% {
+    d: path('M0 14 C45 6 70 22 110 14 C150 6 180 22 220 14 C260 6 280 22 320 14');
+  }
+  50% {
+    d: path('M0 14 C45 22 70 6 110 14 C150 22 180 6 220 14 C260 22 280 6 320 14');
+  }
+}
+
+@keyframes compact-strand-drift {
+  0%,
+  100% {
+    d: path('M12 0 C4 25 20 42 12 60 C4 84 20 104 12 124 C7 139 17 150 12 160');
+  }
+  50% {
+    d: path('M12 0 C19 25 5 42 12 60 C20 84 4 104 12 124 C18 139 7 150 12 160');
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .compact-toc *,
+  .compact-toc *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}

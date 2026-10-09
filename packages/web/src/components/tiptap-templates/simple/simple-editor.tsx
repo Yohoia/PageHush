@@ -79,6 +79,7 @@ export interface SimpleEditorSlots {
 }
 
 export interface SimpleEditorProps {
+  editable?: boolean;
   content?: Parameters<typeof useEditor>[0]['content'];
   contentType?: 'json' | 'html' | 'markdown';
   onCreate?: (editor: ReturnType<typeof useEditor>) => void;
@@ -203,6 +204,7 @@ const MobileToolbarContent = ({
 export function SimpleEditor({
   content: providedContent = content,
   contentType = 'json',
+  editable = true,
   onCreate,
   onUpdate,
   ariaLabel = 'Main content area, start typing to enter text.',
@@ -216,6 +218,7 @@ export function SimpleEditor({
 
   const editor = useEditor({
     immediatelyRender: false,
+    editable,
     editorProps: {
       attributes: {
         autocomplete: 'off',
@@ -261,6 +264,10 @@ export function SimpleEditor({
     onCreate: ({ editor }) => onCreate?.(editor),
     onUpdate: ({ editor }) => onUpdate?.(editor),
   });
+
+  useEffect(() => {
+    editor?.setEditable(editable);
+  }, [editor, editable]);
 
   useEffect(() => {
     if (!isMobile && mobileView !== 'main') {

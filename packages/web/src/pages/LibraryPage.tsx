@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUpRight, Check, LoaderCircle, Plus, Undo2 } from 'lucide-react';
 import {
@@ -8,6 +8,10 @@ import {
   getArticleDisplayStatus,
 } from '@/data/articles';
 import { ApiError, getArticle, listArticles, updateArticle, type ApiArticle } from '@/lib/api';
+import { ArticleOpenLink } from '@/components/ArticleOpenLink';
+import { preloadEditorPage } from '@/lib/editor-route';
+import { getArticleCover } from '@/lib/article-cover';
+import { clearLibraryReturn, peekLibraryReturn, rememberLibrary } from '@/lib/library-return';
 
 function formatReadingTime(content: string) {
   const normalized = content
@@ -30,12 +34,57 @@ function formatArticleDate(value: string) {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
+const clipTypeLabels: Record<string, string> = {
+  article: '文章',
+  selection: '选区',
+  bookmark: '书签',
+  screenshot: '截图',
+  simplified: '简化',
+  full_page: '整页',
+  pdf: 'PDF',
+  email: '邮件',
+};
+
+function formatCardReadingTime(article: ApiArticle | (typeof fallbackArticles)[number]) {
+  if ('readingTimeMinutes' in article && article.readingTimeMinutes) {
+    return `${article.readingTimeMinutes} 分钟阅读`;
+  }
+  return formatReadingTime(article.content);
+}
+
+function formatCardDate(article: ApiArticle | (typeof fallbackArticles)[number]) {
+  const value = 'sourcePublishedAt' in article ? article.sourcePublishedAt : null;
+  return formatArticleDate(value || article.publishedAt);
+}
+
 export function LibraryPage() {
+  const location = useLocation();
+  const libraryUrl = location.pathname + location.search;
+  const [restored] = useState(() => peekLibraryReturn(libraryUrl));
+  useLayoutEffect(() => {
+    if (restored) {
+      clearLibraryReturn(libraryUrl);
+      window.scrollTo({ top: restored.scrollY, behavior: 'instant' });
+    }
+  }, [libraryUrl, restored]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateAction, setShowCreateAction] = useState(false);
-  const [articles, setArticles] =
-    useState<Array<ApiArticle | (typeof fallbackArticles)[number]>>(fallbackArticles);
-  const [articlesLoading, setArticlesLoading] = useState(true);
+  const [articles, setArticles] = useState<Array<ApiArticle | (typeof fallbackArticles)[number]>>(
+    restored?.articles ?? fallbackArticles,
+  );
+  const [articlesLoading, setArticlesLoading] = useState(!restored);
+  useEffect(() => {
+    if (articlesLoading) return;
+    const prepare = () => {
+      void preloadEditorPage().catch(() => undefined);
+    };
+    if ('requestIdleCallback' in window) {
+      const idle = window.requestIdleCallback(prepare, { timeout: 800 });
+      return () => window.cancelIdleCallback(idle);
+    }
+    const timer = setTimeout(prepare, 350);
+    return () => clearTimeout(timer);
+  }, [articlesLoading]);
   const [publishing, setPublishing] = useState<Set<string>>(() => new Set());
   const publishingRef = useRef(new Set<string>());
   const [recentlyPublished, setRecentlyPublished] = useState<Set<string>>(() => new Set());
@@ -60,7 +109,7 @@ export function LibraryPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setArticlesLoading(true);
+    if (!restored) setArticlesLoading(true);
 
     listArticles()
       .then((data) => {
@@ -69,7 +118,7 @@ export function LibraryPage() {
       })
       .catch(() => {
         if (cancelled) return;
-        setArticles(fallbackArticles);
+        setArticles(restored?.articles ?? fallbackArticles);
       })
       .finally(() => {
         if (!cancelled) setArticlesLoading(false);
@@ -218,38 +267,49 @@ export function LibraryPage() {
         </div>
       ) : null}
 
-      <div className="article-grid">
+      <div className="article-grid" style={restored ? { overflowAnchor: 'none' } : undefined}>
         <AnimatePresence initial={true} mode="popLayout">
           {visibleArticles.map((article, index) => (
             <motion.div
               key={article.slug}
               className="article-card-cell"
               layout="position"
-              initial={{ opacity: 0, y: 20 }}
+              initial={
+                restored
+                  ? restored.slug === article.slug
+                    ? { opacity: 0.45, y: 8 }
+                    : false
+                  : { opacity: 0, y: 20 }
+              }
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97 }}
               transition={{
-                duration: 0.28,
-                delay: index * 0.035,
-                ease: 'easeOut',
+                duration: restored ? 0.36 : 0.28,
+                delay: restored ? 0 : index * 0.035,
+                ease: restored ? [0.22, 1, 0.36, 1] : 'easeOut',
               }}
             >
               <div className="article-card-link">
                 <motion.article
                   className="article-card"
+                  data-article-slug={article.slug}
                   whileHover={{ y: -4 }}
                   whileTap={{ scale: 0.995 }}
                 >
-                  <Link
-                    to={`/articles/${article.slug}`}
-                    className="article-card-open-link"
-                    aria-label={`进入文章：${article.title}`}
-                  >
-                    <span className="sr-only">{article.title}</span>
-                  </Link>
+                  <ArticleOpenLink
+                    article={article}
+                    onOpen={() =>
+                      rememberLibrary({
+                        articles,
+                        slug: article.slug,
+                        url: location.pathname + location.search,
+                        scrollY: window.scrollY,
+                      })
+                    }
+                  />
                   <img
                     className="article-card-media"
-                    src={article.cover ?? undefined}
+                    src={getArticleCover(article)}
                     alt=""
                     loading="lazy"
                     decoding="async"
@@ -265,6 +325,23 @@ export function LibraryPage() {
                   </div>
                   <h2 className="article-card-title">{article.title}</h2>
                   <p className="article-card-description">{article.description}</p>
+                  {'sourceUrl' in article && article.sourceUrl ? (
+                    <a
+                      className="article-card-source"
+                      href={article.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {article.sourceSiteIconUrl ? (
+                        <img src={article.sourceSiteIconUrl} alt="" loading="lazy" />
+                      ) : null}
+                      <span>{article.sourceSiteName || new URL(article.sourceUrl).hostname}</span>
+                      {article.clipType ? (
+                        <em>{clipTypeLabels[article.clipType] || '剪藏'}</em>
+                      ) : null}
+                    </a>
+                  ) : null}
                   <div className="article-card-tags">
                     {article.tags.map((tag) => (
                       <span key={tag}>#{tag}</span>
@@ -273,8 +350,7 @@ export function LibraryPage() {
                   <div className="article-card-spacer" aria-hidden="true" />
                   <div className="article-card-foot">
                     <span>
-                      {formatArticleDate(article.publishedAt)} ·{' '}
-                      {formatReadingTime(article.content)}
+                      {formatCardDate(article)} · {formatCardReadingTime(article)}
                     </span>
                     <button
                       type="button"

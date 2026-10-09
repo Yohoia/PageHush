@@ -20,10 +20,11 @@
     "format:check": "prettier --check \"packages/**/*.{ts,tsx,css,html}\" \"*.{json,md}\"",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "check": "npm run typecheck && npm run lint && npm run build && npm run test",
     "db:seed": "tsx --env-file-if-exists=.env scripts/seed-articles.ts",
     "db:migrate": "npm run db:migrate --workspace @pagehush/api",
-    "auth:hash": "tsx scripts/hash-access-code.ts"
+    "auth:hash": "tsx scripts/hash-access-code.ts",
+    "test:e2e:integration": "playwright test -c playwright.integration.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -18,6 +18,8 @@ import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor
 import { articleTopics, articles, defaultArticleContent, MAX_ARTICLE_TAGS } from '@/data/articles';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { motion } from 'motion/react';
+import { clearArticleHandoff, getArticleHandoff } from '@/lib/article-handoff';
+import { DEFAULT_ARTICLE_COVER } from '@/lib/article-cover';
 import {
   ApiError,
   type ApiArticle,
@@ -62,8 +64,21 @@ export function EditorPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const tocParam = searchParams.get('toc');
+  const compactParam = searchParams.get('tocCompact');
+  const compactVariant =
+    compactParam === 'edge' ||
+    compactParam === 'footer' ||
+    compactParam === 'scrub' ||
+    compactParam === 'stack'
+      ? compactParam
+      : undefined;
   const tocVariant: ArticleTocVariant | 'off' =
-    tocParam === 'b' || tocParam === 'c' || tocParam === 'd' || tocParam === 'e' || tocParam === 'f' || tocParam === 'g'
+    tocParam === 'b' ||
+    tocParam === 'c' ||
+    tocParam === 'd' ||
+    tocParam === 'e' ||
+    tocParam === 'f' ||
+    tocParam === 'g'
       ? tocParam
       : tocParam === 'off'
         ? 'off'
@@ -72,8 +87,11 @@ export function EditorPage() {
     () => articles.find((article) => article.slug === articleSlug),
     [articleSlug],
   );
-  const article = selectedArticle ?? newArticle;
-  const fallbackContent = selectedArticle?.content ?? defaultArticleContent;
+  const incomingArticle = useMemo(() => getArticleHandoff(articleSlug), [articleSlug]);
+  const article = incomingArticle ?? selectedArticle ?? newArticle;
+  const fallbackContent =
+    incomingArticle?.content ?? selectedArticle?.content ?? defaultArticleContent;
+  const initialContentRef = useRef(fallbackContent);
   const coverInputId = useId();
 
   const [remoteArticle, setRemoteArticle] = useState<ApiArticle | null>(null);
@@ -94,13 +112,17 @@ export function EditorPage() {
     return () => window.clearTimeout(timer);
   }, [saveState]);
 
-  const [cover, setCover] = useState<string | null>(selectedArticle?.cover ?? null);
-  const [coverAssetId, setCoverAssetId] = useState<string | null>(null);
+  const [cover, setCover] = useState<string | null>(
+    incomingArticle?.cover ?? selectedArticle?.cover ?? null,
+  );
+  const [coverAssetId, setCoverAssetId] = useState<string | null>(
+    incomingArticle?.coverAssetId ?? null,
+  );
   const [coverObjectUrl, setCoverObjectUrl] = useState<string | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
 
   const [title, setTitle] = useState(article.title);
-  const [topic, setTopic] = useState(article.topic);
+  const [topic, setTopic] = useState(article.topic ?? '');
   const [tags, setTags] = useState(article.tags);
   const [characterCount, setCharacterCount] = useState(() => countWords(fallbackContent));
   const [isTopicMenuOpen, setIsTopicMenuOpen] = useState(false);
@@ -184,8 +206,11 @@ export function EditorPage() {
         setTopic(data.topic ?? '');
         setTags(data.tags);
         setCharacterCount(countWords(data.content));
-        setEditorContent(data.content);
-        setEditorContentVersion((version) => version + 1);
+        if (data.content !== initialContentRef.current) {
+          initialContentRef.current = data.content;
+          setEditorContent(data.content);
+          setEditorContentVersion((version) => version + 1);
+        }
         setCover(data.cover);
         setCoverAssetId(data.coverAssetId);
       })
@@ -194,7 +219,10 @@ export function EditorPage() {
         setArticleError('文章加载失败，请刷新后重试');
       })
       .finally(() => {
-        if (!cancelled) setArticleLoading(false);
+        if (!cancelled) {
+          clearArticleHandoff(articleSlug);
+          setArticleLoading(false);
+        }
       });
 
     return () => {
@@ -464,6 +492,7 @@ export function EditorPage() {
     <section
       ref={rootRef}
       className={`editor-page ${isFullscreen ? 'is-fullscreen' : ''} ${isScrolled ? 'is-scrolled' : ''}`}
+      data-article-slug={articleSlug}
       aria-busy={articleLoading}
     >
       {articleError ? (
@@ -486,6 +515,7 @@ export function EditorPage() {
         key={`${articleSlug ?? 'new'}-${editorContentVersion}`}
         content={editorContent}
         contentType="markdown"
+        editable={!articleLoading && !articleError}
         ariaLabel="正文编辑区"
         onCreate={(editor) => {
           editorRef.current = editor;
@@ -494,6 +524,7 @@ export function EditorPage() {
       >
         {({ toolbar, search, content }) => (
           <EditorLayout
+            toolbarDisabled={articleLoading || Boolean(articleError)}
             back={
               <motion.button
                 type="button"
@@ -527,7 +558,7 @@ export function EditorPage() {
             headerBefore={
               <div
                 className="editor-header-stage editor-header-before"
-                inert={isFullscreen}
+                inert={isFullscreen || articleLoading}
                 aria-hidden={isFullscreen}
               >
                 <div className="page-content editor-page-content">
@@ -628,11 +659,13 @@ export function EditorPage() {
                   className="editor-cover-input"
                   type="file"
                   accept="image/*"
+                  disabled={articleLoading}
                   onChange={handleCoverChange}
                 />
                 <textarea
                   className="editor-title-input"
                   value={title}
+                  readOnly={articleLoading}
                   placeholder="标题"
                   aria-label="文章标题"
                   rows={1}
@@ -649,31 +682,29 @@ export function EditorPage() {
                 />
                 <div className="editor-cover-stage" inert={isFullscreen} aria-hidden={isFullscreen}>
                   <div className="editor-cover-reveal">
-                    {cover ? (
-                      <figure className="editor-cover">
-                        <img src={cover} alt="文章封面" />
-                        <label
-                          className="editor-cover-action"
-                          htmlFor={coverInputId}
-                          aria-label="更换封面"
-                        >
-                          <span className="editor-cover-action-icon" aria-hidden="true">
-                            <Images size={20} strokeWidth={1.6} />
-                          </span>
-                          <span className="editor-cover-action-text">更换封面</span>
-                        </label>
-                      </figure>
-                    ) : (
-                      <label className="editor-cover-empty" htmlFor={coverInputId}>
-                        <img
-                          className="editor-cover-empty-art"
-                          src="/covers/upload-cover.png"
-                          alt=""
-                        />
-                        <span className="editor-cover-empty-title">上传封面</span>
-                        <small>支持 JPG、PNG、WebP，最大 5MB</small>
+                    <figure className={cover ? 'editor-cover' : 'editor-cover is-default'}>
+                      <img
+                        src={cover ?? DEFAULT_ARTICLE_COVER}
+                        alt={cover ? '文章封面' : '默认封面占位图'}
+                      />
+                      <label
+                        className="editor-cover-action"
+                        htmlFor={coverInputId}
+                        aria-label={cover ? '更换封面' : '上传封面'}
+                      >
+                        <span className="editor-cover-action-icon" aria-hidden="true">
+                          <Images size={20} strokeWidth={1.6} />
+                        </span>
+                        <span className="editor-cover-action-text">
+                          {cover ? '更换封面' : '上传封面'}
+                        </span>
                       </label>
-                    )}
+                      {cover ? null : (
+                        <figcaption className="editor-cover-default-note">
+                          默认封面 · 点击上传
+                        </figcaption>
+                      )}
+                    </figure>
                     {coverError ? (
                       <p className="editor-cover-error" role="alert">
                         {coverError}
@@ -686,7 +717,7 @@ export function EditorPage() {
             headerAfter={
               <div
                 className="editor-header-stage editor-header-after"
-                inert={isFullscreen}
+                inert={isFullscreen || articleLoading}
                 aria-hidden={isFullscreen}
               >
                 <div className="page-content editor-page-content">
@@ -774,7 +805,9 @@ export function EditorPage() {
         )}
       </SimpleEditor>
 
-      {tocVariant !== 'off' ? <ArticleToc variant={tocVariant} hidden={isFullscreen} /> : null}
+      {tocVariant !== 'off' ? (
+        <ArticleToc variant={tocVariant} hidden={isFullscreen} compactVariant={compactVariant} />
+      ) : null}
     </section>
   );
 }

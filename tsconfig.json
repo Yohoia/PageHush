@@ -7,6 +7,7 @@
     "eslint.config.mjs",
     "vitest.config.ts",
     "playwright.config.ts",
+    "playwright.integration.config.ts",
     "tests/e2e/**/*.ts",
     "scripts/**/*.ts"
   ]

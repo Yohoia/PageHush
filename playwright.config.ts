@@ -4,6 +4,7 @@ const port = 5173;
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: '**/smoke.spec.ts',
   timeout: 30_000,
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),

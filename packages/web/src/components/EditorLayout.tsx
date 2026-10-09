@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 interface EditorLayoutProps {
+  toolbarDisabled?: boolean;
   back: ReactNode;
   actions: ReactNode;
   headerBefore: ReactNode;
@@ -12,6 +13,7 @@ interface EditorLayoutProps {
 }
 
 export function EditorLayout({
+  toolbarDisabled = false,
   back,
   actions,
   headerBefore,
@@ -25,7 +27,9 @@ export function EditorLayout({
     <>
       <header className="editor-topbar" aria-label="编辑工具与文章操作">
         {back}
-        <div className="simple-editor-toolbar-stage">{toolbar}</div>
+        <div className="simple-editor-toolbar-stage" inert={toolbarDisabled}>
+          {toolbar}
+        </div>
         {actions}
       </header>
       <div className="simple-editor-wrapper">

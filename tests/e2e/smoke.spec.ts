@@ -247,7 +247,7 @@ test('uploads and previews an article cover without creating persistent test dat
     }),
   );
   await page.goto('/editor');
-  await expect(page.locator('.editor-cover-empty')).toContainText('上传封面');
+  await expect(page.locator('.editor-cover-default-note')).toContainText('默认封面 · 点击上传');
   await page.locator('.editor-cover-input').setInputFiles({
     name: 'test-cover.png',
     mimeType: 'image/png',

@@ -5,14 +5,21 @@ import { LogOut, Plus } from 'lucide-react';
 import { ServiceStatus } from './ServiceStatus';
 import { pageTransition, pageVariants } from '../motionPresets';
 import { getAuthSession, logout } from '@/lib/api';
+import { peekLibraryReturn } from '@/lib/library-return';
 
 const navigation = [{ to: '/editor', label: '写作', icon: Plus, end: false }];
+const copyrightYear = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  timeZone: 'Asia/Shanghai',
+}).format(new Date());
 
 export function AppShell() {
   const location = useLocation();
   const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'guest'>('checking');
   const isEditorRoute =
     location.pathname === '/editor' || location.pathname.startsWith('/articles/');
+  const isLibraryReturn =
+    !isEditorRoute && Boolean(peekLibraryReturn(location.pathname + location.search));
 
   useEffect(() => {
     let cancelled = false;
@@ -47,28 +54,6 @@ export function AppShell() {
   }
 
   if (authState === 'guest') {
-    if (location.pathname.startsWith('/editor/demo') || location.pathname.startsWith('/articles/demo')) {
-      return (
-        <div className="flex min-h-dvh flex-col bg-paper text-ink">
-          <main className="min-h-dvh flex-1">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.section
-                key={location.pathname}
-                className="min-h-dvh w-full"
-                variants={pageVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                transition={pageTransition}
-              >
-                <Outlet />
-              </motion.section>
-            </AnimatePresence>
-          </main>
-        </div>
-      );
-    }
-
     const redirect = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?redirect=${redirect}`} replace />;
   }
@@ -85,7 +70,7 @@ export function AppShell() {
           <AnimatePresence mode="wait" initial={false}>
             <motion.section
               key={location.pathname}
-              className="min-h-dvh w-full"
+              className="app-route-surface min-h-dvh w-full"
               variants={pageVariants}
               initial="hidden"
               animate="visible"
@@ -160,9 +145,9 @@ export function AppShell() {
               <AnimatePresence mode="wait" initial={false}>
                 <motion.section
                   key={location.pathname}
-                  className="flex w-full flex-1 flex-col"
+                  className="app-route-surface flex w-full flex-1 flex-col"
                   variants={pageVariants}
-                  initial="hidden"
+                  initial={isLibraryReturn ? false : 'hidden'}
                   animate="visible"
                   exit="exit"
                   transition={pageTransition}
@@ -172,8 +157,12 @@ export function AppShell() {
               </AnimatePresence>
             </div>
           </main>
-          <footer className="border-t border-line py-5 text-center text-xs text-muted">
-            PageHush 基础框架 · Markdown / MDX 源文本为内容真源
+          <footer className="mt-[clamp(2rem,1.5rem+0.625vw,2.5rem)] shrink-0 px-6 text-center text-sm text-muted">
+            <p className="flex min-h-11 flex-wrap items-center justify-center gap-x-2 leading-11">
+              <span className="whitespace-nowrap font-mono">© {copyrightYear} Yohoia</span>
+              <span aria-hidden="true">·</span>
+              <span className="whitespace-nowrap font-sans">PageHush</span>
+            </p>
           </footer>
         </>
       )}

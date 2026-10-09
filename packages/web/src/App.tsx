@@ -1,11 +1,13 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router';
+import { Navigate, Route, Routes, useParams } from 'react-router';
 import { AppShell } from './components/AppShell';
 import { LoginPage } from './pages/LoginPage';
 import { LibraryPage } from './pages/LibraryPage';
+import { preloadEditorPage } from './lib/editor-route';
+import './styles/article-transition.css';
 
 const EditorPage = lazy(async () => {
-  const module = await import('./pages/EditorPage');
+  const module = await preloadEditorPage();
   return { default: module.EditorPage };
 });
 
@@ -15,6 +17,11 @@ function EditorRouteFallback() {
       正在打开编辑器…
     </div>
   );
+}
+
+function EditorRoute() {
+  const { articleSlug } = useParams();
+  return <EditorPage key={articleSlug ?? 'new'} />;
 }
 
 export function App() {
@@ -27,7 +34,7 @@ export function App() {
           path="editor"
           element={
             <Suspense fallback={<EditorRouteFallback />}>
-              <EditorPage />
+              <EditorRoute />
             </Suspense>
           }
         />
@@ -37,21 +44,12 @@ export function App() {
           path="articles/:articleSlug"
           element={
             <Suspense fallback={<EditorRouteFallback />}>
-              <EditorPage />
+              <EditorRoute />
             </Suspense>
           }
         />
 
-        <Route
-          path="editor/:articleSlug"
-          element={
-            <Suspense fallback={<EditorRouteFallback />}>
-              <EditorPage />
-            </Suspense>
-          }
-        />
         <Route path="*" element={<Navigate to="/" replace />} />
-
       </Route>
     </Routes>
   );

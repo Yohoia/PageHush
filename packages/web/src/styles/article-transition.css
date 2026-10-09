@@ -1,0 +1,65 @@
+html[data-article-transition] .app-route-surface {
+  opacity: 1 !important;
+}
+
+.article-cover-flight {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  object-fit: cover;
+  transform-origin: 0 0;
+  pointer-events: none;
+  will-change: transform;
+}
+html[data-article-transition-engine='overlay'] .editor-cover img {
+  visibility: hidden;
+}
+html[data-article-transition-engine='overlay'] .editor-page {
+  animation: article-page-arrive 220ms ease-out both;
+}
+
+/* One image changes size; the rest of the page settles in behind it. */
+html[data-article-transition]::view-transition-group(article-cover) {
+  animation-duration: 460ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 2;
+}
+html[data-article-transition]::view-transition-image-pair(article-cover) {
+  isolation: auto;
+}
+html[data-article-transition]::view-transition-old(article-cover) {
+  animation: none;
+  opacity: 0;
+}
+html[data-article-transition]::view-transition-new(article-cover) {
+  animation: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+html[data-article-transition]::view-transition-old(root) {
+  animation: article-page-leave 120ms ease-out both;
+}
+html[data-article-transition]::view-transition-new(root) {
+  animation: article-page-arrive 220ms ease-out 60ms both;
+}
+@keyframes article-page-leave {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes article-page-arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-article-transition]::view-transition-group(*) {
+    animation-duration: 0s;
+  }
+}
