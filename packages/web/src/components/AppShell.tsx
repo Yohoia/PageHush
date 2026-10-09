@@ -47,6 +47,28 @@ export function AppShell() {
   }
 
   if (authState === 'guest') {
+    if (location.pathname.startsWith('/editor/demo') || location.pathname.startsWith('/articles/demo')) {
+      return (
+        <div className="flex min-h-dvh flex-col bg-paper text-ink">
+          <main className="min-h-dvh flex-1">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.section
+                key={location.pathname}
+                className="min-h-dvh w-full"
+                variants={pageVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={pageTransition}
+              >
+                <Outlet />
+              </motion.section>
+            </AnimatePresence>
+          </main>
+        </div>
+      );
+    }
+
     const redirect = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?redirect=${redirect}`} replace />;
   }

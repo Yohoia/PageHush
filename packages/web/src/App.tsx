@@ -41,7 +41,17 @@ export function App() {
             </Suspense>
           }
         />
+
+        <Route
+          path="editor/:articleSlug"
+          element={
+            <Suspense fallback={<EditorRouteFallback />}>
+              <EditorPage />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
+
       </Route>
     </Routes>
   );
