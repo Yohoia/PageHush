@@ -27,6 +27,7 @@
 - **写作与编辑**：基于 Tiptap 官方 Simple Editor 编辑内容，支持主题、标签、标题、封面预览与全屏写作。
 - **本地开发骨架**：npm workspaces 组织 `web`、`api`、`worker`、`shared`，并提供类型检查、Lint、单元测试和 E2E 测试脚本。
 - **访问认证**：单人访问码登录、数据库会话、HttpOnly Cookie 与 API 接口保护。
+- **阅读体验**：文章目录、阅读进度、返回顶部，以及封面到文章页的连续转场。
 
 ## 内容机制
 
@@ -51,19 +52,22 @@ npm run dev:api
 
 API 地址：<http://127.0.0.1:8787>，健康检查为 `/v1/health`。
 
+浏览器测试分为两组：`npm run test:e2e` 只运行内置 Mock 的界面与交互用例；`npm run test:e2e:integration` 运行 `tests/e2e/smoke.spec.ts`，需要先在 `.env` 配置 `E2E_ACCESS_CODE`，并单独启动 `npm run dev:api`。
+
 ## 常用命令
 
-| 命令                   | 用途                               |
-| ---------------------- | ---------------------------------- |
-| `npm run dev:web`      | 启动 Web 开发服务器                |
-| `npm run dev:api`      | 启动 Fastify API 骨架              |
-| `npm run typecheck`    | 检查所有 workspace 类型            |
-| `npm run lint`         | 运行 ESLint                        |
-| `npm test`             | 运行单元测试                       |
-| `npm run test:e2e`     | 运行 Playwright 浏览器测试         |
-| `npm run build`        | 构建 shared、api、worker 和 web    |
-| `npm run check`        | 串联类型检查、Lint、单元测试和构建 |
-| `npm run format:check` | 检查 Prettier 格式                 |
+| 命令                           | 用途                                      |
+| ------------------------------ | ----------------------------------------- |
+| `npm run dev:web`              | 启动 Web 开发服务器                       |
+| `npm run dev:api`              | 启动 Fastify API 骨架                     |
+| `npm run typecheck`            | 检查所有 workspace 类型                   |
+| `npm run lint`                 | 运行 ESLint                               |
+| `npm test`                     | 运行单元测试                              |
+| `npm run test:e2e`             | 运行内置 Mock 的 Playwright 浏览器测试    |
+| `npm run test:e2e:integration` | 运行需要本地 API 与访问码的集成浏览器测试 |
+| `npm run build`                | 构建 shared、api、worker 和 web           |
+| `npm run check`                | 串联类型检查、Lint、单元测试和构建        |
+| `npm run format:check`         | 检查 Prettier 格式                        |
 
 ## 项目结构
 
@@ -73,9 +77,9 @@ API 地址：<http://127.0.0.1:8787>，健康检查为 `/v1/health`。
 | `packages/api`    | Fastify 管理 API、服务器资源适配与发布接口   |
 | `packages/worker` | 未来预览、构建与发布任务 worker              |
 | `packages/shared` | API 契约、领域枚举与跨端共享类型             |
-| `design/writing`  | 纸面写作视觉与交互原型                       |
+| `tests/e2e`       | Playwright 浏览器测试与测试夹具              |
 | `docs`            | 项目规划、技术选型与实施约束                 |
-| `logo`            | 原始 Logo 资产                               |
+| `assets`          | README 图片与公开说明素材                    |
 
 ## 当前进度
 
@@ -83,7 +87,7 @@ API 地址：<http://127.0.0.1:8787>，健康检查为 `/v1/health`。
 | ---------- | ----------------------------------------------------- |
 | Web 界面   | 可运行：首页画廊、文章编辑、封面占位与全屏写作        |
 | 编辑器     | 已接入 Tiptap Simple Editor 与 Markdown 扩展          |
-| API        | 骨架已就绪，业务数据接口尚未实现                      |
+| API        | 可运行：访问码认证与文章、主题、标签、封面接口已接入  |
 | 数据持久化 | PostgreSQL 已接入，文章、主题、标签与资源记录可持久化 |
 | 对象存储   | MinIO 已接入，封面可上传到私有桶并通过 API 读回       |
 | 发布链路   | Astro 构建、内容包与 Nginx 切换尚未实现               |
@@ -95,7 +99,8 @@ API 地址：<http://127.0.0.1:8787>，健康检查为 `/v1/health`。
 - [编辑器选型](docs/editor-options.md)
 - [自建对象存储方案](docs/self-hosted-storage.md)
 - [服务器服务](docs/server-services.md)
-- [第一版设计原型](design/writing/solo.html)
+
+历史设计原型、走查截图和过程帧不再保存在当前工作区；需要追溯时查看对应 Git 历史提交。本地再生成的 `design/**/evidence/` 与 `design/**/vendor/` 产物由 `.gitignore` 忽略。
 
 ## 服务器依赖边界
 

@@ -29,3 +29,5 @@ yarn-error.log*
 # OS and local design-task artifacts
 .DS_Store
 /design-task/
+design/**/evidence/
+design/**/vendor/
