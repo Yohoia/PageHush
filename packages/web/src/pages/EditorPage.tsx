@@ -12,10 +12,11 @@ import type { Editor } from '@tiptap/react';
 import { ArrowLeft, ChevronDown, Images, Plus, X } from 'lucide-react';
 import { EditorLayout } from '@/components/EditorLayout';
 import { ArticleActions } from '@/components/ArticleActions';
+import { ArticleToc, type ArticleTocVariant } from '@/components/ArticleToc';
 import { useEditorFullscreen } from '@/hooks/use-editor-fullscreen';
 import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
 import { articleTopics, articles, defaultArticleContent, MAX_ARTICLE_TAGS } from '@/data/articles';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { motion } from 'motion/react';
 import {
   ApiError,
@@ -59,6 +60,14 @@ const MAX_COVER_FILE_SIZE = 5 * 1024 * 1024;
 export function EditorPage() {
   const { articleSlug } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tocParam = searchParams.get('toc');
+  const tocVariant: ArticleTocVariant | 'off' =
+    tocParam === 'b' || tocParam === 'c' || tocParam === 'd' || tocParam === 'e' || tocParam === 'f' || tocParam === 'g'
+      ? tocParam
+      : tocParam === 'off'
+        ? 'off'
+        : 'a';
   const selectedArticle = useMemo(
     () => articles.find((article) => article.slug === articleSlug),
     [articleSlug],
@@ -764,6 +773,8 @@ export function EditorPage() {
           </EditorLayout>
         )}
       </SimpleEditor>
+
+      {tocVariant !== 'off' ? <ArticleToc variant={tocVariant} hidden={isFullscreen} /> : null}
     </section>
   );
 }
