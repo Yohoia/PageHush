@@ -10,6 +10,16 @@ export interface ApiTag {
   articleCount: number;
 }
 
+export type ApiClipType =
+  | 'article'
+  | 'selection'
+  | 'bookmark'
+  | 'screenshot'
+  | 'simplified'
+  | 'full_page'
+  | 'pdf'
+  | 'email';
+
 export interface ApiArticle {
   id: string;
   slug: string;
@@ -20,6 +30,14 @@ export interface ApiArticle {
   status: 'draft' | 'published';
   language: 'zh' | 'en';
   author: string | null;
+  sourceUrl?: string | null;
+  sourceSiteName?: string | null;
+  sourceSiteIconUrl?: string | null;
+  sourcePublishedAt?: string | null;
+  clipType?: ApiClipType | null;
+  wordCount?: number | null;
+  readingTimeMinutes?: number | null;
+  sourceChecksum?: string | null;
   topic: string | null;
   topicId: string | null;
   tags: string[];
@@ -52,6 +70,14 @@ export interface AuthSession {
 
 export interface ArticleSavePayload {
   title: string;
+  sourceUrl?: string | null;
+  sourceSiteName?: string | null;
+  sourceSiteIconUrl?: string | null;
+  sourcePublishedAt?: string | null;
+  clipType?: ApiClipType | null;
+  wordCount?: number | null;
+  readingTimeMinutes?: number | null;
+  sourceChecksum?: string | null;
   slug?: string;
   description?: string;
   content?: string;

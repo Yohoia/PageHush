@@ -17,6 +17,34 @@ export const updateTagBodySchema = Type.Object({
 });
 
 const articleStatusSchema = Type.Union([Type.Literal('draft'), Type.Literal('published')]);
+const articleSourceSchema = Type.Object({
+  sourceUrl: Type.Optional(Type.Union([Type.String({ maxLength: 2048 }), Type.Null()])),
+  sourceSiteName: Type.Optional(Type.Union([Type.String({ maxLength: 120 }), Type.Null()])),
+  sourceSiteIconUrl: Type.Optional(Type.Union([Type.String({ maxLength: 1000 }), Type.Null()])),
+  sourcePublishedAt: Type.Optional(Type.Union([Type.String({ maxLength: 40 }), Type.Null()])),
+  clipType: Type.Optional(
+    Type.Union([
+      Type.Literal('article'),
+      Type.Literal('selection'),
+      Type.Literal('bookmark'),
+      Type.Literal('screenshot'),
+      Type.Literal('simplified'),
+      Type.Literal('full_page'),
+      Type.Literal('pdf'),
+      Type.Literal('email'),
+      Type.Null(),
+    ]),
+  ),
+  wordCount: Type.Optional(
+    Type.Union([Type.Integer({ minimum: 0, maximum: 1_000_000 }), Type.Null()]),
+  ),
+  readingTimeMinutes: Type.Optional(
+    Type.Union([Type.Integer({ minimum: 0, maximum: 10_000 }), Type.Null()]),
+  ),
+  sourceChecksum: Type.Optional(
+    Type.Union([Type.String({ minLength: 64, maxLength: 64 }), Type.Null()]),
+  ),
+});
 const articleFormatSchema = Type.Union([Type.Literal('md'), Type.Literal('mdx')]);
 const articleLanguageSchema = Type.Union([Type.Literal('zh'), Type.Literal('en')]);
 
@@ -37,6 +65,7 @@ export const createArticleBodySchema = Type.Object({
   cover: Type.Optional(Type.Union([Type.String({ maxLength: 1000 }), Type.Null()])),
   coverAlt: Type.Optional(Type.Union([Type.String({ maxLength: 300 }), Type.Null()])),
   tagNames: Type.Optional(Type.Array(Type.String({ maxLength: 40 }), { maxItems: 10 })),
+  ...articleSourceSchema.properties,
 });
 
 export const updateArticleBodySchema = Type.Object({
@@ -56,4 +85,5 @@ export const updateArticleBodySchema = Type.Object({
   cover: Type.Optional(Type.Union([Type.String({ maxLength: 1000 }), Type.Null()])),
   coverAlt: Type.Optional(Type.Union([Type.String({ maxLength: 300 }), Type.Null()])),
   tagNames: Type.Optional(Type.Array(Type.String({ maxLength: 40 }), { maxItems: 10 })),
+  ...articleSourceSchema.properties,
 });

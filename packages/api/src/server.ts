@@ -63,6 +63,7 @@ export async function buildServer(options: BuildServerOptions = {}) {
     'GET /v1/health',
     'GET /v1/ready',
     'POST /v1/auth/login',
+    'POST /v1/auth/login-extension',
     'GET /v1/auth/session',
     'DELETE /v1/auth/logout',
   ]);

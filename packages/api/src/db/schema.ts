@@ -17,6 +17,17 @@ export const articleLanguageEnum = pgEnum('article_language', ['zh', 'en']);
 
 export const articleFormatEnum = pgEnum('article_format', ['md', 'mdx']);
 
+export const articleClipTypeEnum = pgEnum('article_clip_type', [
+  'article',
+  'selection',
+  'bookmark',
+  'screenshot',
+  'simplified',
+  'full_page',
+  'pdf',
+  'email',
+]);
+
 export const assetKindEnum = pgEnum('asset_kind', ['cover', 'inline_image', 'attachment']);
 
 export const assetStatusEnum = pgEnum('asset_status', ['uploading', 'ready', 'deleted']);
@@ -89,6 +100,14 @@ export const articles = pgTable(
     status: articleStatusEnum('status').notNull().default('draft'),
     language: articleLanguageEnum('language').notNull().default('zh'),
     author: text('author'),
+    sourceUrl: text('source_url'),
+    sourceSiteName: text('source_site_name'),
+    sourceSiteIconUrl: text('source_site_icon_url'),
+    sourcePublishedAt: timestamp('source_published_at', { withTimezone: true }),
+    clipType: articleClipTypeEnum('clip_type'),
+    wordCount: integer('word_count'),
+    readingTimeMinutes: integer('reading_time_minutes'),
+    sourceChecksum: text('source_checksum'),
     topicId: uuid('topic_id').references(() => topics.id, {
       onDelete: 'set null',
     }),

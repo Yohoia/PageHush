@@ -27,6 +27,7 @@ class ArticleValidationError extends Error {
       | 'slug_immutable_for_published'
       | 'invalid_published_at'
       | 'invalid_updated_at'
+      | 'invalid_source_published_at'
       | 'updated_at_before_published_at',
   ) {
     super(code);
@@ -37,7 +38,10 @@ function isUuid(value: string) {
   return UUID_PATTERN.test(value);
 }
 
-function parseDate(value: string, code: 'invalid_published_at' | 'invalid_updated_at') {
+function parseDate(
+  value: string,
+  code: 'invalid_published_at' | 'invalid_updated_at' | 'invalid_source_published_at',
+) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) throw new ArticleValidationError(code);
   return date;
@@ -61,6 +65,14 @@ function publicArticle(row: ArticleRow, topicName: string | null, tagNames: stri
     status: row.status,
     language: row.language,
     author: row.author,
+    sourceUrl: row.sourceUrl,
+    sourceSiteName: row.sourceSiteName,
+    sourceSiteIconUrl: row.sourceSiteIconUrl,
+    sourcePublishedAt: row.sourcePublishedAt?.toISOString() ?? null,
+    clipType: row.clipType,
+    wordCount: row.wordCount,
+    readingTimeMinutes: row.readingTimeMinutes,
+    sourceChecksum: row.sourceChecksum,
     topic: topicName,
     topicId: row.topicId,
     tags: tagNames,
@@ -279,6 +291,9 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
             ? parseDate(body.publishedAt, 'invalid_published_at')
             : new Date();
           const updatedAt = body.updatedAt ? parseDate(body.updatedAt, 'invalid_updated_at') : null;
+          const sourcePublishedAt = body.sourcePublishedAt
+            ? parseDate(body.sourcePublishedAt, 'invalid_source_published_at')
+            : null;
 
           if (updatedAt && updatedAt < publishedAt) {
             throw new ArticleValidationError('updated_at_before_published_at');
@@ -295,6 +310,14 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
               status: body.status ?? 'draft',
               language: body.language ?? 'zh',
               author: body.author || null,
+              sourceUrl: body.sourceUrl || null,
+              sourceSiteName: body.sourceSiteName || null,
+              sourceSiteIconUrl: body.sourceSiteIconUrl || null,
+              sourcePublishedAt,
+              clipType: body.clipType ?? null,
+              wordCount: body.wordCount ?? null,
+              readingTimeMinutes: body.readingTimeMinutes ?? null,
+              sourceChecksum: body.sourceChecksum || null,
               topicId: topic?.id ?? null,
               coverAssetId: body.coverAssetId || null,
               coverUrl: body.cover || null,
@@ -369,6 +392,26 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
           if (body.status !== undefined) updates.status = body.status;
           if (body.language !== undefined) updates.language = body.language;
           if (body.author !== undefined) updates.author = body.author || null;
+          if (body.sourceUrl !== undefined) updates.sourceUrl = body.sourceUrl || null;
+          if (body.sourceSiteName !== undefined) {
+            updates.sourceSiteName = body.sourceSiteName || null;
+          }
+          if (body.sourceSiteIconUrl !== undefined) {
+            updates.sourceSiteIconUrl = body.sourceSiteIconUrl || null;
+          }
+          if (body.sourcePublishedAt !== undefined) {
+            updates.sourcePublishedAt = body.sourcePublishedAt
+              ? parseDate(body.sourcePublishedAt, 'invalid_source_published_at')
+              : null;
+          }
+          if (body.clipType !== undefined) updates.clipType = body.clipType ?? null;
+          if (body.wordCount !== undefined) updates.wordCount = body.wordCount ?? null;
+          if (body.readingTimeMinutes !== undefined) {
+            updates.readingTimeMinutes = body.readingTimeMinutes ?? null;
+          }
+          if (body.sourceChecksum !== undefined) {
+            updates.sourceChecksum = body.sourceChecksum || null;
+          }
           if (topic) updates.topicId = topic.id;
           if (body.topicId === null) updates.topicId = null;
           if (body.coverAssetId !== undefined) updates.coverAssetId = body.coverAssetId || null;
@@ -403,6 +446,14 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
               'format',
               'language',
               'author',
+              'sourceUrl',
+              'sourceSiteName',
+              'sourceSiteIconUrl',
+              'sourcePublishedAt',
+              'clipType',
+              'wordCount',
+              'readingTimeMinutes',
+              'sourceChecksum',
               'topicId',
               'coverAssetId',
               'coverUrl',
