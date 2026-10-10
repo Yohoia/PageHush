@@ -1,5 +1,6 @@
 node_modules
 packages/*/dist
+packages/web/src/components/tiptap-*
 packages/*/build
 design/writing/evidence
 design/writing/vendor

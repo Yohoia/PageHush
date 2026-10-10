@@ -18,6 +18,20 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: [
+      // Vendored Tiptap Simple Editor sources: upstream copies, kept lint-clean
+      // with base rules but exempt from first-party conventions.
+      'packages/web/src/components/tiptap-*/**/*.{ts,tsx}',
+    ],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {},
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
