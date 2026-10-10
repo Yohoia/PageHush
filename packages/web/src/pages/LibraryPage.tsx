@@ -2,30 +2,31 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUpRight, Check, LoaderCircle, Plus, Undo2 } from 'lucide-react';
+import { articles as fallbackArticles, getArticleDisplayStatus } from '@/data/articles';
 import {
-  articleTopics,
-  articles as fallbackArticles,
-  getArticleDisplayStatus,
-} from '@/data/articles';
-import { ApiError, getArticle, listArticles, updateArticle, type ApiArticle } from '@/lib/api';
+  ApiError,
+  getArticle,
+  listArticles,
+  listTopics,
+  updateArticle,
+  type ApiArticleListItem,
+} from '@/lib/api';
 import { ArticleOpenLink } from '@/components/ArticleOpenLink';
 import { preloadEditorPage } from '@/lib/editor-route';
 import { getArticleCover } from '@/lib/article-cover';
 import { clearLibraryReturn, peekLibraryReturn, rememberLibrary } from '@/lib/library-return';
+import { estimateReadingTimeMinutes } from '@pagehush/shared';
 
 function formatReadingTime(content: string) {
-  const normalized = content
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/[#>*_`~\-[\]()!]/g, ' ')
-    .trim();
-  const cjk = normalized.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
-  const latinWords = normalized
-    .replace(/[\u4e00-\u9fff]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean).length;
-  const units = cjk + latinWords;
+  return `${estimateReadingTimeMinutes(content)} 分钟阅读`;
+}
 
-  return `${Math.max(1, Math.ceil(units / 400))} 分钟阅读`;
+function sourceHostname(sourceUrl: string) {
+  try {
+    return new URL(sourceUrl).hostname;
+  } catch {
+    return sourceUrl;
+  }
 }
 
 function formatArticleDate(value: string) {
@@ -45,14 +46,15 @@ const clipTypeLabels: Record<string, string> = {
   email: '邮件',
 };
 
-function formatCardReadingTime(article: ApiArticle | (typeof fallbackArticles)[number]) {
+function formatCardReadingTime(article: ApiArticleListItem | (typeof fallbackArticles)[number]) {
   if ('readingTimeMinutes' in article && article.readingTimeMinutes) {
     return `${article.readingTimeMinutes} 分钟阅读`;
   }
-  return formatReadingTime(article.content);
+  if (typeof article.content === 'string') return formatReadingTime(article.content);
+  return '1 分钟阅读';
 }
 
-function formatCardDate(article: ApiArticle | (typeof fallbackArticles)[number]) {
+function formatCardDate(article: ApiArticleListItem | (typeof fallbackArticles)[number]) {
   const value = 'sourcePublishedAt' in article ? article.sourcePublishedAt : null;
   return formatArticleDate(value || article.publishedAt);
 }
@@ -69,9 +71,9 @@ export function LibraryPage() {
   }, [libraryUrl, restored]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateAction, setShowCreateAction] = useState(false);
-  const [articles, setArticles] = useState<Array<ApiArticle | (typeof fallbackArticles)[number]>>(
-    restored?.articles ?? fallbackArticles,
-  );
+  const [articles, setArticles] = useState<
+    Array<ApiArticleListItem | (typeof fallbackArticles)[number]>
+  >(restored?.articles ?? fallbackArticles);
   const [articlesLoading, setArticlesLoading] = useState(!restored);
   useEffect(() => {
     if (articlesLoading) return;
@@ -105,7 +107,35 @@ export function LibraryPage() {
     return () => window.clearTimeout(timer);
   }, [publicationToast]);
   const topic = searchParams.get('topic') ?? '全部';
-  const activeTopic = articleTopics.includes(topic) ? topic : '全部';
+  const [topicOptions, setTopicOptions] = useState<string[]>(() => ['全部']);
+  const [topicsLoaded, setTopicsLoaded] = useState(false);
+  const activeTopic = topicOptions.includes(topic) ? topic : '全部';
+
+  useEffect(() => {
+    let cancelled = false;
+    listTopics()
+      .then((data) => {
+        if (cancelled) return;
+        setTopicOptions(['全部', ...data.map((item) => item.name)]);
+        setTopicsLoaded(true);
+      })
+      .catch(() => {
+        // API 不可用时由已加载文章的主题名兜底。
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (topicsLoaded) return;
+    const names = new Set<string>();
+    for (const article of articles) {
+      if (article.topic) names.add(article.topic);
+    }
+    setTopicOptions(['全部', ...[...names].sort((a, b) => a.localeCompare(b, 'zh-CN'))]);
+  }, [articles, topicsLoaded]);
 
   useEffect(() => {
     let cancelled = false;
@@ -242,7 +272,7 @@ export function LibraryPage() {
         </p>
 
         <div className="article-topic-filters" role="group" aria-label="主题筛选">
-          {articleTopics.map((item) => {
+          {topicOptions.map((item) => {
             const active = item === activeTopic;
 
             return (
@@ -342,7 +372,7 @@ export function LibraryPage() {
                           referrerPolicy="no-referrer"
                         />
                       ) : null}
-                      <span>{article.sourceSiteName || new URL(article.sourceUrl).hostname}</span>
+                      <span>{article.sourceSiteName || sourceHostname(article.sourceUrl)}</span>
                       {article.clipType ? (
                         <em>{clipTypeLabels[article.clipType] || '剪藏'}</em>
                       ) : null}

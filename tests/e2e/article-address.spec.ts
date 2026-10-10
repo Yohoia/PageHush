@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Route } from '@playwright/test';
 import { articleShortId } from '../../packages/shared/src/article-address';
 import { tocArticle, tocFixtureResponse } from './fixtures/toc-article';
 
@@ -98,16 +98,19 @@ test('saving a renamed article keeps its address and updating uses its UUID', as
 
 test('a newly saved article navigates to its short address', async ({ page }) => {
   let savedTitle = '';
-  await page.route('**/v1/articles', (route) => {
+  const handleArticlesRoute = async (route: Route) => {
     if (route.request().method() === 'POST') {
       savedTitle = route.request().postDataJSON().title;
-      return route.fulfill({
+      await route.fulfill({
         status: 201,
         json: { ...tocArticle, id, shortId, slug: legacySlug, title: savedTitle },
       });
+      return;
     }
-    return route.fulfill({ json: [] });
-  });
+    await route.fulfill({ json: [] });
+  };
+  await page.route('**/v1/articles', handleArticlesRoute);
+  await page.route('**/v1/articles?*', handleArticlesRoute);
   await page.goto('/editor');
   await page.getByLabel('文章标题').fill('新建的中文文章');
   await page.getByRole('button', { name: '保存文章', exact: true }).click();
@@ -126,7 +129,7 @@ test('external article covers and body images do not send the PageHush referrer'
     sourceUrl: 'https://example.com/article',
     content: '## 外链图片\n\n![微信公众号图片](https://example.com/image.png)',
   };
-  await page.route('**/v1/articles', (route) => {
+  await page.route('**/v1/articles?*', (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ json: [externalArticle] });
     return route.fulfill({ json: [] });
   });

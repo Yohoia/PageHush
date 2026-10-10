@@ -1,78 +1,25 @@
-import { useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { ApiError, loginWithAccessCode } from '@/lib/api';
 
-const DIGIT_COUNT = 6;
+const MIN_CODE_LENGTH = 6;
+const MAX_CODE_LENGTH = 128;
 
 function safeRedirect(value: string | null) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return '/';
   return value;
 }
 
-function toDigits(value: string) {
-  const enteredDigits = value.replace(/\D/g, '').slice(0, DIGIT_COUNT).split('');
-  return Array.from({ length: DIGIT_COUNT }, (_, index) => enteredDigits[index] ?? '');
-}
-
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [digits, setDigits] = useState<string[]>(() => Array(DIGIT_COUNT).fill(''));
+  const [accessCode, setAccessCode] = useState('');
   const [remember, setRemember] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  const focusDigit = (index: number) => {
-    const nextIndex = Math.max(0, Math.min(DIGIT_COUNT - 1, index));
-    inputRefs.current[nextIndex]?.focus();
-    inputRefs.current[nextIndex]?.select();
-  };
-
-  const setPastedDigits = (value: string) => {
-    const nextDigits = toDigits(value);
-    setDigits(nextDigits);
-    focusDigit(Math.min(nextDigits.filter(Boolean).length, DIGIT_COUNT - 1));
-  };
-
-  const handleDigitChange = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, '').slice(-1);
-    setDigits((currentDigits) => {
-      const nextDigits = [...currentDigits];
-      nextDigits[index] = digit;
-      return nextDigits;
-    });
-
-    if (digit) {
-      focusDigit(index + 1);
-    }
-  };
-
-  const handlePaste = (index: number, event: ClipboardEvent<HTMLInputElement>) => {
-    event.preventDefault();
-    setPastedDigits(event.clipboardData.getData('text'));
-  };
-
-  const handleKeyDown = (index: number, event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Backspace' && !digits[index] && index > 0) {
-      event.preventDefault();
-      focusDigit(index - 1);
-    }
-
-    if (event.key === 'ArrowLeft' && index > 0) {
-      event.preventDefault();
-      focusDigit(index - 1);
-    }
-
-    if (event.key === 'ArrowRight' && index < DIGIT_COUNT - 1) {
-      event.preventDefault();
-      focusDigit(index + 1);
-    }
-  };
-
-  const accessCode = digits.join('');
-  const isComplete = digits.every((digit) => digit !== '');
+  const isComplete = accessCode.length >= MIN_CODE_LENGTH;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -87,8 +34,7 @@ export function LoginPage() {
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.code === 'invalid_access_code') {
         setError('访问码不正确，请重新输入。');
-        setDigits(Array(DIGIT_COUNT).fill(''));
-        focusDigit(0);
+        setAccessCode('');
       } else if (
         submitError instanceof ApiError &&
         submitError.code === 'access_code_not_configured'
@@ -119,26 +65,20 @@ export function LoginPage() {
         <p>输入写在你私人备忘里的钥匙。</p>
 
         <form onSubmit={handleSubmit}>
-          <div className="login-keys" role="group" aria-label="访问码">
-            {digits.map((digit, index) => (
-              <input
-                key={index}
-                ref={(element) => {
-                  inputRefs.current[index] = element;
-                }}
-                className="login-key-input"
-                type="password"
-                value={digit}
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={1}
-                aria-label={`第 ${index + 1} 位，共 ${DIGIT_COUNT} 位`}
-                aria-invalid={Boolean(error)}
-                onChange={(event) => handleDigitChange(index, event.target.value)}
-                onPaste={(event) => handlePaste(index, event)}
-                onKeyDown={(event) => handleKeyDown(index, event)}
-              />
-            ))}
+          <div className="login-keys">
+            <input
+              className="login-key-input login-code-input"
+              type="password"
+              value={accessCode}
+              autoComplete="off"
+              spellCheck={false}
+              minLength={MIN_CODE_LENGTH}
+              maxLength={MAX_CODE_LENGTH}
+              aria-label="访问码"
+              aria-invalid={Boolean(error)}
+              autoFocus
+              onChange={(event) => setAccessCode(event.target.value.trim())}
+            />
           </div>
 
           {error ? (

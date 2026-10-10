@@ -33,7 +33,7 @@ test('uses a library return snapshot only once', async ({ page }) => {
       json: tocFixtureResponse(new URL(route.request().url()).pathname),
     }),
   );
-  await page.route('**/v1/articles', (route) =>
+  await page.route('**/v1/articles?*', (route) =>
     route.fulfill({
       headers: { 'Cache-Control': 'no-store' },
       json: [second],

@@ -317,7 +317,7 @@ for (const action of ['button', 'browser'] as const) {
       });
       let holdList = false;
       let pending = false;
-      await page.route('**/v1/articles', async (route) => {
+      await page.route('**/v1/articles?*', async (route) => {
         if (holdList) {
           pending = true;
           await held;
