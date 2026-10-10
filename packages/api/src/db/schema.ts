@@ -3,6 +3,7 @@ import {
   bigint,
   index,
   integer,
+  uniqueIndex,
   pgEnum,
   pgTable,
   primaryKey,
@@ -32,20 +33,28 @@ export const assetKindEnum = pgEnum('asset_kind', ['cover', 'inline_image', 'att
 
 export const assetStatusEnum = pgEnum('asset_status', ['uploading', 'ready', 'deleted']);
 
-export const topics = pgTable('topics', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull().unique(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  archivedAt: timestamp('archived_at', { withTimezone: true }),
-});
+export const topics = pgTable(
+  'topics',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+  },
+  (table) => [uniqueIndex('topics_name_lower_unique').on(sql`lower(${table.name})`)],
+);
 
-export const tags = pgTable('tags', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull().unique(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const tags = pgTable(
+  'tags',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('tags_name_lower_unique').on(sql`lower(${table.name})`)],
+);
 
 export const authSessions = pgTable(
   'auth_sessions',
@@ -59,13 +68,6 @@ export const authSessions = pgTable(
   },
   (table) => [index('auth_sessions_expires_at_idx').on(table.expiresAt)],
 );
-
-export const authSessionRelations = relations(authSessions, ({ one }) => ({
-  article: one(articles, {
-    fields: [authSessions.id],
-    references: [articles.id],
-  }),
-}));
 
 export const assets = pgTable(
   'assets',
@@ -92,7 +94,7 @@ export const articles = pgTable(
   'articles',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    slug: text('slug').notNull().unique(),
+    slug: text('slug').notNull(),
     title: text('title').notNull(),
     description: text('description').notNull().default(''),
     content: text('content').notNull().default(''),
@@ -123,6 +125,9 @@ export const articles = pgTable(
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [
+    uniqueIndex('articles_slug_active_unique')
+      .on(table.slug)
+      .where(sql`deleted_at is null`),
     index('articles_status_idx').on(table.status),
     index('articles_topic_id_idx').on(table.topicId),
     index('articles_published_at_idx').on(table.publishedAt),
