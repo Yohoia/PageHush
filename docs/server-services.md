@@ -54,7 +54,8 @@ PageHush 使用单人访问码登录，不再依赖 Nginx Basic Auth。
 - 哈希使用 scrypt、随机盐和 `timingSafeEqual` 验证；
 - 登录成功后创建数据库会话；
 - 浏览器只收到 HttpOnly、SameSite=Lax、HTTPS 下 Secure 的会话 Cookie；
-- 勾选“信任此设备”后会话 Cookie 保留 30 天；
+- 勾选“信任此设备”后会话 Cookie 保留 30 天，服务端会话有效期 30 天；
+- 不勾选时使用浏览器会话 Cookie，服务端会话有效期 24 小时；
 - 登录接口每分钟每 IP 最多尝试 10 次；
 - 除健康检查、就绪检查、登录、会话查询和退出外，所有 API 都需要有效会话。
 

@@ -95,6 +95,8 @@ API 地址：<http://127.0.0.1:8787>，健康检查为 `/v1/health`。
 
 ## 设计与文档
 
+- [领域词汇表](GLOSSARY.md)：项目术语的唯一权威定义
+- [架构决策记录](docs/adr/)：已定的难以逆转决策及其理由
 - [项目规划](docs/project-plan.md)
 - [技术栈方案](docs/tech-stack.md)
 - [编辑器选型](docs/editor-options.md)

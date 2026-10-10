@@ -18,10 +18,10 @@
 | 编辑区代码高亮     | Tiptap CodeBlock 扩展接入 Shiki                                         | CodeBlock 3.31.4；Shiki 4.4.3，与预览、博客共用主题和语言配置；适配待实现                            |
 | 管理 API           | Fastify + TypeScript                                                    | Fastify 5.12.5；TypeScript 6.0.3                                                                     |
 | 接口契约           | TypeBox + Fastify Type Provider                                         | `typebox` 1.3.36；`@fastify/type-provider-typebox` 6.1.0                                             |
-| 使用方式           | 单人工作台，直接进入编辑器                                              | 无登录、注册、用户表、会话、密码哈希依赖                                                             |
+| 使用方式           | 单人工作台，访问码登录后进入编辑器                                      | 不引入多用户账号注册；使用 scrypt 访问码哈希、数据库会话与 HttpOnly Cookie，见服务器服务文档           |
 | API 配套           | 请求限流、响应头；跨域仅按需要启用                                      | rate-limit 11.2.0；helmet 13.1.1；cors 11.3.0                                                        |
 | 数据库             | PostgreSQL                                                              | 18.6；已有受支持的 17 可另行复用                                                                     |
-| 数据访问           | Drizzle ORM + pg + SQL 迁移                                             | drizzle-orm 0.45.3；drizzle-kit 0.31.11；pg 8.23.1                                                   |
+| 数据访问           | Drizzle ORM + pg + SQL 迁移                                             | drizzle-orm 0.45.3；drizzle-kit 0.31.5；pg 8.23.1                                                   |
 | 对象存储           | MinIO 社区版，Docker 部署                                               | 产品已定；镜像标签与 digest 尚未确认                                                                 |
 | 存储接口           | AWS SDK v3 的 S3 客户端与签名模块                                       | 两个模块统一 3.1146.0                                                                                |
 | 普通内容预览       | unified / remark / rehype                                               | unified 11.0.5；remark-parse 11.0.0；remark-gfm 4.0.1；remark-rehype 11.1.2；rehype-stringify 10.0.1 |
@@ -77,9 +77,9 @@ UnoCSS 也可实现既定样式，但当前方案优先采用博客已有的 Tai
 - `packages/worker`：任务 worker 配置占位，默认禁用，不启动任务循环。
 - `packages/shared`：TypeBox 契约、文章格式与状态枚举。
 
-本阶段没有 Docker Compose、本地 PostgreSQL、本地 MinIO、数据库迁移或发布任务。`DATABASE_URL` 与 MinIO 参数只作为未来连接服务器实例的配置占位。
+（2026-10-06 骨架阶段状态）本阶段没有 Docker Compose、本地 PostgreSQL、本地 MinIO、数据库迁移或发布任务。2026-10-09 更新：PostgreSQL 迁移（`packages/api/drizzle`）与服务器端 MinIO 已接入；本地开发通过 SSH 隧道连接服务器实例，仓库仍不内置容器编排。发布任务 worker 仍为占位。
 
-`drizzle-kit` 暂未安装：数据库模型与 SQL 迁移开始前引入工具更合适，也避免当前把带已知开发依赖风险的未用工具放进基础骨架。`drizzle-orm` 已按版本基线保留。当前锁定版本下 npm audit 报告 KaTeX 相关链路 5 个低危提示；KaTeX 0.16.47 是与博客和 Tiptap Mathematics 兼容的既定基线，接入不受信公式内容前需要再评估并补充安全验收。
+`drizzle-kit` 已作为 `@pagehush/api` 的开发依赖引入（0.31.5），迁移文件位于 `packages/api/drizzle`，通过 `npm run db:migrate` 应用。当前锁定版本下 npm audit 报告 KaTeX 相关链路 5 个低危提示；另因 drizzle-kit 开发链携带旧版 esbuild 报告 1 个中危提示（仅影响本地开发服务器，生产部署不安装 devDependencies，接受该风险并等待 drizzle-kit 升级）；KaTeX 0.16.47 是与博客和 Tiptap Mathematics 兼容的既定基线，接入不受信公式内容前需要再评估并补充安全验收。
 
 ## 5. 2026-10-08 界面与测试进展
 
