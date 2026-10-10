@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-paper: #fcfcfa;
+  --color-surface: #fffef9;
+  --color-ink: #22231f;
+  --color-muted: #72746d;
+  --color-faint: #a1a39a;
+  --color-line: #ddded4;
+  --color-hover: #eeeee6;
+  --color-selected: #e6e7de;
+
+  --font-serif: 'DM Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  --color-paper: #0e0e11;
+  --color-surface: #17171b;
+  --color-ink: #f4f4f5;
+  --color-muted: #a1a1aa;
+  --color-faint: #71717a;
+  --color-line: #27272a;
+  --color-hover: #1f1f23;
+  --color-selected: #26262b;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    overflow-y: scroll;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: #dfe1d5;
+  }
+}
+
+.page-shell {
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
+  padding-inline: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.page-content {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.page-wide {
+  width: 100%;
+}

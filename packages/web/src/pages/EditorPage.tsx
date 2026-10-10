@@ -2,37 +2,34 @@ import {
   useCallback,
   useEffect,
   useEffectEvent,
-  useId,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type ChangeEvent,
 } from 'react';
 import type { Editor } from '@tiptap/react';
-import { ArrowLeft, ChevronDown, Images, Plus, X } from 'lucide-react';
+import { ArrowLeft, Images } from 'lucide-react';
 import { EditorLayout } from '@/components/EditorLayout';
 import { ArticleActions } from '@/components/ArticleActions';
 import { ArticleToc, type ArticleTocVariant } from '@/components/ArticleToc';
 import { useEditorFullscreen } from '@/hooks/use-editor-fullscreen';
+import { useCoverUpload } from '@/hooks/use-cover-upload';
+import { useArticleSave } from '@/hooks/use-article-save';
 import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
 import { articleTopics, articles, defaultArticleContent, MAX_ARTICLE_TAGS } from '@/data/articles';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
-import { articleIdFromShortId } from '@pagehush/shared';
+import { articleIdFromShortId, countReadingUnits } from '@pagehush/shared';
+import { TopicPicker } from '@/components/taxonomy/topic-picker';
+import { TagPicker } from '@/components/taxonomy/tag-picker';
 import { articlePath } from '@/lib/article-address';
 import { motion } from 'motion/react';
 import { clearArticleHandoff, getArticleHandoff } from '@/lib/article-handoff';
 import { DEFAULT_ARTICLE_COVER } from '@/lib/article-cover';
 import {
-  ApiError,
-  type ApiArticle,
-  createArticle,
-  deleteArticle,
   deleteTopic as deleteTopicRequest,
   getArticle,
   listTopics,
-  updateArticle,
-  uploadCover,
+  type ApiArticle,
 } from '@/lib/api';
 
 const newArticle = {
@@ -41,26 +38,6 @@ const newArticle = {
   publishedAt: new Date().toLocaleDateString('sv-SE'),
   tags: [] as string[],
 };
-
-function countWords(text: string): number {
-  const normalized = text
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/[#>*_`~\-[\] ()!]/g, ' ')
-    .trim();
-  const cjkCharacters = normalized.match(/[\u4e00-\u9fff]/g)?.length ?? 0;
-  const latinWords = normalized
-    .replace(/[\u4e00-\u9fff]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean).length;
-
-  return cjkCharacters + latinWords;
-}
-
-function normalizeTaxonomyValue(value: string): string {
-  return value.replace(/^#+/, '').trim();
-}
-
-const MAX_COVER_FILE_SIZE = 5 * 1024 * 1024;
 
 export function EditorPage() {
   const { articleSlug: legacySlug, articleKey } = useParams();
@@ -107,50 +84,34 @@ export function EditorPage() {
   const fallbackContent =
     incomingArticle?.content ?? selectedArticle?.content ?? defaultArticleContent;
   const initialContentRef = useRef(fallbackContent);
-  const coverInputId = useId();
 
-  const [remoteArticle, setRemoteArticle] = useState<ApiArticle | null>(null);
   const [articleLoading, setArticleLoading] = useState(Boolean(articleSlug));
   const [articleError, setArticleError] = useState<string | null>(null);
   const [editorContent, setEditorContent] = useState(fallbackContent);
   const [editorContentVersion, setEditorContentVersion] = useState(0);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<'idle' | 'saved' | 'published' | 'unpublished'>(
-    'idle',
-  );
-
-  useEffect(() => {
-    if (saveState === 'idle') return;
-
-    const timer = window.setTimeout(() => setSaveState('idle'), 1800);
-    return () => window.clearTimeout(timer);
-  }, [saveState]);
-
-  const [cover, setCover] = useState<string | null>(
+  const {
+    coverInputId,
+    cover,
+    setCover,
+    coverAssetId,
+    setCoverAssetId,
+    coverError,
+    handleCoverChange,
+  } = useCoverUpload(
     incomingArticle?.cover ?? selectedArticle?.cover ?? null,
-  );
-  const [coverAssetId, setCoverAssetId] = useState<string | null>(
     incomingArticle?.coverAssetId ?? null,
   );
-  const [coverObjectUrl, setCoverObjectUrl] = useState<string | null>(null);
-  const [coverError, setCoverError] = useState<string | null>(null);
 
   const [title, setTitle] = useState(article.title);
   const [topic, setTopic] = useState(article.topic ?? '');
   const [tags, setTags] = useState(article.tags);
-  const [characterCount, setCharacterCount] = useState(() => countWords(fallbackContent));
-  const [isTopicMenuOpen, setIsTopicMenuOpen] = useState(false);
-  const [topicQuery, setTopicQuery] = useState('');
-  const [isTagInputVisible, setIsTagInputVisible] = useState(false);
-  const [tagQuery, setTagQuery] = useState('');
+  const [characterCount, setCharacterCount] = useState(() => countReadingUnits(fallbackContent));
   const {
     rootRef,
     isFullscreen,
     changeFullscreen,
     toggleFullscreen: toggleEditorFullscreen,
   } = useEditorFullscreen();
-  const actionLockRef = useRef(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -166,16 +127,6 @@ export function EditorPage() {
       .map((name) => ({ id: undefined as string | undefined, name })),
   );
 
-  const editorTopics = useMemo(() => topicOptions.map((item) => item.name), [topicOptions]);
-
-  const availableTopics = useMemo(() => {
-    const query = topicQuery.trim();
-    return query ? editorTopics.filter((item) => item.includes(query)) : editorTopics;
-  }, [topicQuery, editorTopics]);
-
-  const topicButtonRef = useRef<HTMLButtonElement>(null);
-  const topicMenuRef = useRef<HTMLDivElement>(null);
-  const tagInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<Editor | null>(null);
@@ -228,7 +179,7 @@ export function EditorPage() {
         setTitle(data.title);
         setTopic(data.topic ?? '');
         setTags(data.tags);
-        setCharacterCount(countWords(data.content));
+        setCharacterCount(countReadingUnits(data.content));
         if (data.content !== initialContentRef.current) {
           initialContentRef.current = data.content;
           setEditorContent(data.content);
@@ -271,186 +222,52 @@ export function EditorPage() {
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        !topicMenuRef.current?.contains(event.target as Node) &&
-        !topicButtonRef.current?.contains(event.target as Node)
-      ) {
-        setIsTopicMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-
-      if (isTopicMenuOpen) {
-        setIsTopicMenuOpen(false);
-        topicButtonRef.current?.focus();
-      }
-
-      if (isTagInputVisible) {
-        setIsTagInputVisible(false);
-      }
-
       changeFullscreen(false);
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isTopicMenuOpen, isFullscreen, isTagInputVisible, changeFullscreen]);
-
-  useEffect(() => {
-    if (isTagInputVisible) {
-      tagInputRef.current?.focus();
-    }
-  }, [isTagInputVisible]);
-
-  useEffect(() => {
-    const objectUrl = coverObjectUrl;
-
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-    };
-  }, [coverObjectUrl]);
-
-  const handleCoverChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setCoverError('请选择图片文件');
-      return;
-    }
-
-    if (file.size > MAX_COVER_FILE_SIZE) {
-      setCoverError('封面图片不能超过 5MB');
-      return;
-    }
-
-    setCoverError(null);
-
-    try {
-      const asset = await uploadCover(file);
-      setCover(asset.url);
-      setCoverAssetId(asset.id);
-    } catch (error) {
-      const isValidationError = error instanceof ApiError && [400, 413, 415].includes(error.status);
-
-      if (!isValidationError) {
-        // API / MinIO 不可用时继续使用本地预览，保证编辑不中断。
-        const nextObjectUrl = URL.createObjectURL(file);
-        setCover(nextObjectUrl);
-        setCoverObjectUrl(nextObjectUrl);
-      } else {
-        setCoverError(error instanceof Error ? error.message : '封面上传失败');
-      }
-    } finally {
-      event.target.value = '';
-    }
-  };
+  }, [changeFullscreen]);
 
   const handleEditorUpdate = useCallback((editor: Editor) => {
     editorRef.current = editor;
-    setCharacterCount(countWords(editor.getText()));
+    setCharacterCount(countReadingUnits(editor.getText()));
   }, []);
 
-  const saveArticle = useCallback(async () => {
-    const editor = editorRef.current;
-
-    if (!editor || actionLockRef.current || articleLoading) return;
-    if (articleSlug && !remoteArticle) {
-      setSaveError('文章尚未加载成功，请刷新后重试');
-      return;
-    }
-
-    actionLockRef.current = true;
-
-    setIsSaving(true);
-    setSaveError(null);
-    setSaveState('idle');
-
-    try {
-      const content = editor.getMarkdown();
-      const status = remoteArticle?.status ?? 'draft';
-      if (status === 'published' && (!title.trim() || !editor.getText().trim())) {
-        throw new Error('请填写文章标题和正文后再发布');
-      }
-
-      const payload = {
-        title: title.trim() || '无标题',
-        description: (
-          editor
-            .getText()
-            .split(/\n{2,}/)
-            .map((block) => block.trim())
-            .find(Boolean) ?? ''
-        ).slice(0, 500),
-        content,
-        format: 'md' as const,
-        status,
-        language: remoteArticle?.language ?? ('zh' as const),
-        author: remoteArticle?.author ?? 'Yohoia',
-        topicName: topic,
-        coverAssetId: coverAssetId || null,
-        coverAlt: remoteArticle?.coverAlt ?? null,
-        tagNames: tags,
-      };
-
-      const saved = remoteArticle
-        ? await updateArticle(remoteArticle.id, payload)
-        : await createArticle(payload);
-
-      setRemoteArticle(saved);
+  const getEditor = useCallback(() => editorRef.current, []);
+  const handleSaved = useCallback(
+    (saved: ApiArticle) => {
       setTitle(saved.title);
       setTopic(saved.topic ?? topic);
       setTags(saved.tags);
       setCover(saved.cover);
       setCoverAssetId(saved.coverAssetId);
-      setSaveState('saved');
+    },
+    [topic],
+  );
 
-      if (!remoteArticle) {
-        navigate(articlePath(saved), { replace: true });
-      }
-    } catch (error) {
-      setSaveError(
-        error instanceof ApiError
-          ? '操作失败，请检查连接后重试'
-          : error instanceof Error
-            ? error.message
-            : '保存失败',
-      );
-    } finally {
-      actionLockRef.current = false;
-      setIsSaving(false);
-    }
-  }, [articleLoading, articleSlug, topic, coverAssetId, navigate, remoteArticle, tags, title]);
-
-  const removeArticle = async () => {
-    if (!remoteArticle || actionLockRef.current) return;
-    actionLockRef.current = true;
-    setIsSaving(true);
-    try {
-      await deleteArticle(remoteArticle.id);
-      navigate('/', { replace: true });
-    } catch {
-      throw new Error('删除失败，请检查连接后重试');
-    } finally {
-      actionLockRef.current = false;
-      setIsSaving(false);
-    }
-  };
+  const {
+    remoteArticle,
+    setRemoteArticle,
+    isSaving,
+    saveError,
+    saveState,
+    saveArticle,
+    removeArticle,
+  } = useArticleSave({
+    articleSlug,
+    articleLoading,
+    getEditor,
+    title,
+    topic,
+    tags,
+    coverAssetId,
+    onSaved: handleSaved,
+  });
 
   const toggleFullscreen = () => {
-    setIsTopicMenuOpen(false);
-    setIsTagInputVisible(false);
     toggleEditorFullscreen();
   };
 
@@ -463,17 +280,8 @@ export function EditorPage() {
     navigate('/');
   };
 
-  const selectTopic = (nextTopic: string) => {
-    const value = normalizeTaxonomyValue(nextTopic);
-    if (!value) return;
-
-    setTopic(value);
-    setIsTopicMenuOpen(false);
-    setTopicQuery('');
-  };
-
   const deleteTopic = async (nextTopic: string) => {
-    if (editorTopics.length <= 1) return;
+    if (topicOptions.length <= 1) return;
 
     const option = topicOptions.find((item) => item.name === nextTopic);
 
@@ -485,30 +293,12 @@ export function EditorPage() {
       setTopicOptions((current) => current.filter((item) => item.name !== nextTopic));
 
       if (topic === nextTopic) {
-        setTopic(editorTopics.find((item) => item !== nextTopic) ?? '');
+        setTopic(topicOptions.find((item) => item.name !== nextTopic)?.name ?? '');
       }
     } catch (error) {
       setArticleError(error instanceof Error ? error.message : '主题删除失败');
     }
   };
-
-  const addTag = (nextTag: string): boolean => {
-    const value = normalizeTaxonomyValue(nextTag);
-    if (!value || tags.includes(value) || tags.length >= MAX_ARTICLE_TAGS) return false;
-
-    setTags((currentTags) => [...currentTags, value]);
-    setTagQuery('');
-    return true;
-  };
-
-  const removeTag = (tag: string) => {
-    setTags((currentTags) => currentTags.filter((item) => item !== tag));
-  };
-
-  const exactTopic = normalizeTaxonomyValue(topicQuery);
-  const canCreateTopic =
-    exactTopic.length > 0 &&
-    !editorTopics.some((item) => item.toLowerCase() === exactTopic.toLowerCase());
 
   return (
     <section
@@ -585,92 +375,12 @@ export function EditorPage() {
                 aria-hidden={isFullscreen}
               >
                 <div className="page-content editor-page-content">
-                  <div className="editor-taxonomy">
-                    <div className="editor-topic-picker">
-                      <button
-                        ref={topicButtonRef}
-                        type="button"
-                        className="editor-topic-button"
-                        aria-haspopup="menu"
-                        aria-expanded={isTopicMenuOpen}
-                        onClick={() => {
-                          setIsTopicMenuOpen((open) => !open);
-                          setIsTagInputVisible(false);
-                        }}
-                      >
-                        {topic} · TOPIC
-                        <ChevronDown size={14} strokeWidth={1.8} aria-hidden="true" />
-                      </button>
-
-                      {isTopicMenuOpen ? (
-                        <div ref={topicMenuRef} className="editor-taxonomy-menu" role="menu">
-                          <label className="editor-taxonomy-field">
-                            <span>搜索或创建主题</span>
-                            <input
-                              value={topicQuery}
-                              placeholder="输入主题名称"
-                              onChange={(event) => setTopicQuery(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                  event.preventDefault();
-                                  selectTopic(availableTopics[0] ?? exactTopic);
-                                }
-                              }}
-                            />
-                          </label>
-
-                          <div
-                            className="editor-taxonomy-options"
-                            role="group"
-                            aria-label="可选择主题"
-                          >
-                            {availableTopics.map((item) => (
-                              <div
-                                key={item}
-                                className={`editor-taxonomy-option ${
-                                  item === topic ? 'active' : ''
-                                }`}
-                              >
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  className="editor-taxonomy-option-label"
-                                  onClick={() => selectTopic(item)}
-                                >
-                                  {item}
-                                </button>
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  className="editor-taxonomy-option-delete"
-                                  aria-label={`删除主题 ${item}`}
-                                  disabled={editorTopics.length <= 1}
-                                  onClick={() => deleteTopic(item)}
-                                >
-                                  <X size={12} strokeWidth={2} aria-hidden="true" />
-                                </button>
-                              </div>
-                            ))}
-
-                            {canCreateTopic ? (
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="create"
-                                onClick={() => selectTopic(exactTopic)}
-                              >
-                                创建「{exactTopic}」并使用
-                              </button>
-                            ) : null}
-
-                            {availableTopics.length === 0 && !canCreateTopic ? (
-                              <span className="editor-taxonomy-empty">没有找到主题</span>
-                            ) : null}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
+                  <TopicPicker
+                    topic={topic}
+                    options={topicOptions}
+                    onSelect={setTopic}
+                    onDelete={deleteTopic}
+                  />
                 </div>
               </div>
             }
@@ -759,64 +469,7 @@ export function EditorPage() {
                     <span aria-hidden="true">·</span>
                     <span>{characterCount} 字</span>
 
-                    <div className="editor-tags" aria-label="文章标签">
-                      {tags.map((tag) => (
-                        <span key={tag} className="editor-tag">
-                          <span className="editor-tag-label">#{tag}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeTag(tag)}
-                            aria-label={`移除标签 ${tag}`}
-                          >
-                            <X size={12} strokeWidth={2} aria-hidden="true" />
-                          </button>
-                        </span>
-                      ))}
-
-                      {tags.length < MAX_ARTICLE_TAGS ? (
-                        <div className="editor-tag-picker">
-                          {isTagInputVisible ? (
-                            <input
-                              ref={tagInputRef}
-                              className="editor-tag-input"
-                              value={tagQuery}
-                              placeholder="标签"
-                              aria-label="新增标签"
-                              onBlur={() => setIsTagInputVisible(false)}
-                              onChange={(event) => setTagQuery(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Escape') {
-                                  event.preventDefault();
-                                  setIsTagInputVisible(false);
-                                  return;
-                                }
-
-                                if (event.key !== 'Enter') return;
-
-                                event.preventDefault();
-                                if (addTag(tagQuery)) {
-                                  setIsTagInputVisible(false);
-                                }
-                              }}
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              className="editor-add-tag"
-                              aria-expanded={isTagInputVisible}
-                              onClick={() => {
-                                setIsTagInputVisible(true);
-                                setTagQuery('');
-                                setIsTopicMenuOpen(false);
-                              }}
-                            >
-                              <Plus size={12} strokeWidth={2} aria-hidden="true" />
-                              标签
-                            </button>
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
+                    <TagPicker tags={tags} maxTags={MAX_ARTICLE_TAGS} onChange={setTags} />
                   </div>
 
                   <div className="mt-3 h-px bg-line md:mt-4" aria-hidden="true" />

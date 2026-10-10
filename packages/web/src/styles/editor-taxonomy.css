@@ -1,0 +1,337 @@
+.editor-taxonomy {
+  display: flex;
+  justify-content: center;
+}
+
+.editor-topic-picker,
+.editor-tag-picker {
+  position: relative;
+  display: inline-flex;
+}
+
+.editor-tag-picker {
+  width: 52px;
+  flex-shrink: 0;
+}
+
+.editor-topic-button,
+.editor-add-tag {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0 4px;
+  color: var(--color-muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.editor-topic-button {
+  position: relative;
+  padding: 0 2px;
+}
+
+.editor-topic-button::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 3px;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0;
+  transform: scaleX(0.35);
+  transform-origin: center;
+  transition:
+    opacity 150ms ease-out,
+    transform 180ms cubic-bezier(0.22, 0.7, 0.26, 1);
+}
+
+.editor-topic-button svg {
+  opacity: 0;
+  transform: translateX(-2px);
+  transition:
+    opacity 150ms ease-out,
+    transform 180ms cubic-bezier(0.22, 0.7, 0.26, 1);
+}
+
+.editor-topic-button:hover,
+.editor-topic-button:focus-visible,
+.editor-topic-button[aria-expanded='true'] {
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.editor-topic-button:hover::after,
+.editor-topic-button:focus-visible::after,
+.editor-topic-button[aria-expanded='true']::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.editor-topic-button:hover svg,
+.editor-topic-button:focus-visible svg,
+.editor-topic-button[aria-expanded='true'] svg {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.editor-add-tag {
+  justify-content: center;
+  width: 100%;
+  min-height: 26px;
+  padding: 0;
+}
+
+.editor-add-tag:hover,
+.editor-add-tag[aria-expanded='true'] {
+  background: var(--color-hover);
+  color: var(--color-ink);
+}
+
+.editor-tag-input {
+  width: 100%;
+  height: 26px;
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  border-radius: 0;
+  background: transparent;
+  padding: 0 2px;
+  color: var(--color-ink);
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  outline: none;
+  transition: border-color 130ms ease-out;
+}
+
+.editor-tag-input:focus {
+  border-color: var(--color-ink);
+}
+
+.editor-tag-input::placeholder {
+  color: var(--color-faint);
+}
+
+.editor-taxonomy-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  width: min(300px, calc(100vw - 48px));
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
+  background: var(--color-surface);
+  box-shadow: 0 16px 38px rgba(27, 29, 26, 0.12);
+  padding: 10px;
+  transform: translateX(-50%);
+}
+
+.editor-taxonomy-menu.tag {
+  width: min(280px, calc(100vw - 48px));
+}
+
+.editor-taxonomy-field {
+  display: grid;
+  gap: 5px;
+  color: var(--color-muted);
+  font-size: 10px;
+}
+
+.editor-taxonomy-field input {
+  height: 34px;
+  border: 1px solid var(--color-line);
+  border-radius: 7px;
+  background: var(--color-paper);
+  padding: 0 8px;
+  color: var(--color-ink);
+  font-size: 13px;
+  outline: none;
+}
+
+.editor-taxonomy-field input:focus {
+  border-color: #9faf8f;
+  box-shadow: 0 0 0 3px rgba(111, 122, 101, 0.12);
+}
+
+.editor-taxonomy-options {
+  display: grid;
+  max-height: 218px;
+  gap: 2px;
+  margin-top: 8px;
+  overflow-y: auto;
+}
+
+.editor-taxonomy-option {
+  display: grid;
+  min-height: 34px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-radius: 7px;
+  background: none;
+  padding: 0 4px 0 8px;
+  color: var(--color-muted);
+  transition:
+    background-color 130ms ease-out,
+    color 130ms ease-out;
+}
+
+.editor-taxonomy-option:hover,
+.editor-taxonomy-option.active {
+  background: var(--color-hover);
+  color: var(--color-ink);
+}
+
+.editor-taxonomy-option-label {
+  overflow: hidden;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: 13px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.editor-taxonomy-option-delete {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: currentcolor;
+  cursor: pointer;
+  opacity: 0.42;
+  transition:
+    background-color 130ms ease-out,
+    color 130ms ease-out,
+    opacity 130ms ease-out;
+}
+
+.editor-taxonomy-option-delete:hover:not(:disabled) {
+  background: rgba(182, 92, 80, 0.1);
+  color: #b65c50;
+  opacity: 1;
+}
+
+.editor-taxonomy-option-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.2;
+}
+
+.dark .editor-taxonomy-option-delete:hover:not(:disabled) {
+  background: rgba(221, 122, 109, 0.12);
+  color: #dd7a6d;
+}
+
+.editor-taxonomy-options button.create {
+  color: #607152;
+}
+
+.dark .editor-taxonomy-options button.create {
+  color: #a5b699;
+}
+
+.editor-taxonomy-option-delete svg {
+  display: block;
+}
+
+.editor-taxonomy-empty {
+  padding: 12px 8px;
+  color: var(--color-faint);
+  font-size: 12px;
+  text-align: center;
+}
+
+.editor-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 10px;
+  margin-top: 5px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.editor-metadata time,
+.editor-metadata > span {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.editor-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.editor-tag {
+  position: relative;
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0 4px;
+  color: var(--color-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  transition: background-color 130ms ease-out;
+}
+
+.editor-tag-label {
+  transition: opacity 130ms ease-out;
+}
+
+.editor-tag button {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #b65c50;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 130ms ease-out;
+}
+
+.editor-tag:hover,
+.editor-tag:focus-within {
+  background: rgba(238, 238, 230, 0.55);
+}
+
+.editor-tag:hover button,
+.editor-tag:focus-within button {
+  opacity: 1;
+}
+
+.editor-tag:hover .editor-tag-label,
+.editor-tag:focus-within .editor-tag-label {
+  opacity: 0.25;
+}
+
+.dark .editor-tag button {
+  color: #dd7a6d;
+}
+
+.dark .editor-tag:hover,
+.dark .editor-tag:focus-within {
+  background: rgba(38, 38, 43, 0.6);
+}
