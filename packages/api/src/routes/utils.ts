@@ -21,11 +21,23 @@ export function uniqueSlugSuffix() {
   return randomBytes(3).toString('hex');
 }
 
+function hasUniqueConstraintCode(value: unknown) {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    'code' in value &&
+    (value as { code?: unknown }).code === '23505',
+  );
+}
+
 export function isUniqueConstraintError(error: unknown) {
+  if (hasUniqueConstraintCode(error)) return true;
+
+  // Drizzle wraps driver errors in DrizzleQueryError; the pg code lives on `cause`.
   return Boolean(
     error &&
     typeof error === 'object' &&
-    'code' in error &&
-    (error as { code?: string }).code === '23505',
+    'cause' in error &&
+    hasUniqueConstraintCode((error as { cause?: unknown }).cause),
   );
 }

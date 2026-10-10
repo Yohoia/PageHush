@@ -1,15 +1,29 @@
 import type { Database } from '../db/client.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { Type } from 'typebox';
 import type { Static } from 'typebox';
 import type { PageHushFastifyInstance } from '../types/fastify.js';
 import { and, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
 import { assets, articles, articleTags, tags, topics } from '../db/schema.js';
 import { createArticleBodySchema, updateArticleBodySchema } from './schemas.js';
 import { isUniqueConstraintError, normalizeName, slugify, uniqueSlugSuffix } from './utils.js';
-import { articleShortId } from '@pagehush/shared';
+import {
+  articleListItemResponseSchema,
+  articleResponseSchema,
+  errorResponseSchema,
+  articleShortId,
+  estimateReadingTimeMinutes,
+} from '@pagehush/shared';
 
 type ArticleListRequest = FastifyRequest<{
-  Querystring: { status?: string; topicId?: string; tagId?: string; q?: string };
+  Querystring: {
+    status?: string;
+    topicId?: string;
+    tagId?: string;
+    q?: string;
+    limit?: string;
+    offset?: string;
+  };
 }>;
 type ArticleSlugRequest = FastifyRequest<{ Params: { slug: string } }>;
 type CreateArticleRequest = FastifyRequest<{ Body: Static<typeof createArticleBodySchema> }>;
@@ -29,6 +43,10 @@ class ArticleValidationError extends Error {
       | 'invalid_published_at'
       | 'invalid_updated_at'
       | 'invalid_source_published_at'
+      | 'invalid_source_url'
+      | 'invalid_source_site_icon_url'
+      | 'invalid_cover_url'
+      | 'invalid_cover_asset'
       | 'updated_at_before_published_at',
   ) {
     super(code);
@@ -37,6 +55,48 @@ class ArticleValidationError extends Error {
 
 function isUuid(value: string) {
   return UUID_PATTERN.test(value);
+}
+
+function ensureHttpUrl(
+  value: string,
+  code: 'invalid_source_url' | 'invalid_source_site_icon_url' | 'invalid_cover_url',
+) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('protocol');
+  } catch {
+    throw new ArticleValidationError(code);
+  }
+}
+
+function ensureOptionalHttpUrl(
+  value: string | null | undefined,
+  code: 'invalid_source_url' | 'invalid_source_site_icon_url' | 'invalid_cover_url',
+) {
+  if (value) ensureHttpUrl(value, code);
+}
+
+function ensureOptionalAssetId(value: string | null | undefined) {
+  if (value && !isUuid(value)) throw new ArticleValidationError('invalid_cover_asset');
+}
+
+function escapeLikePattern(value: string) {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
+const DEFAULT_LIST_LIMIT = 100;
+const MAX_LIST_LIMIT = 200;
+
+function parseListPagination(query: { limit?: string; offset?: string }) {
+  const limit = Number(query.limit ?? DEFAULT_LIST_LIMIT);
+  const offset = Number(query.offset ?? 0);
+
+  return {
+    limit: Number.isInteger(limit)
+      ? Math.min(Math.max(limit, 1), MAX_LIST_LIMIT)
+      : DEFAULT_LIST_LIMIT,
+    offset: Number.isInteger(offset) ? Math.max(offset, 0) : 0,
+  };
 }
 
 function parseDate(
@@ -88,6 +148,14 @@ function publicArticle(row: ArticleRow, topicName: string | null, tagNames: stri
   };
 }
 
+function listArticle(row: ArticleRow, topicName: string | null, tagNames: string[]) {
+  return {
+    ...publicArticle(row, topicName, tagNames),
+    content: undefined,
+    readingTimeMinutes: row.readingTimeMinutes ?? estimateReadingTimeMinutes(row.content),
+  };
+}
+
 function normalizeTagNames(values: string[]) {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -105,6 +173,7 @@ function normalizeTagNames(values: string[]) {
 
 async function ensureTopic(db: Database, topicId?: string | null, topicName?: string) {
   if (topicId) {
+    if (!isUuid(topicId)) throw new ArticleValidationError('topic_not_found');
     const [topic] = await db
       .select({ id: topics.id, name: topics.name })
       .from(topics)
@@ -160,7 +229,7 @@ async function generateUniqueSlug(db: Database, desired: string, excludeId?: str
     const [existing] = await db
       .select({ id: articles.id })
       .from(articles)
-      .where(eq(articles.slug, slug));
+      .where(and(eq(articles.slug, slug), isNull(articles.deletedAt)));
 
     if (!existing || existing.id === excludeId) return slug;
     slug = `${slugify(desired, 'article')}-${uniqueSlugSuffix()}`;
@@ -209,71 +278,107 @@ function sendArticleValidationError(reply: FastifyReply, error: unknown) {
 }
 
 export async function articleRoutes(app: PageHushFastifyInstance) {
-  app.get('/v1/articles', async (request: ArticleListRequest, reply) => {
-    if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
+  app.get(
+    '/v1/articles',
+    {
+      schema: {
+        response: {
+          200: Type.Array(articleListItemResponseSchema),
+          503: errorResponseSchema,
+        },
+      },
+    },
+    async (request: ArticleListRequest, reply) => {
+      if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
 
-    const query = request.query;
-    const conditions = [isNull(articles.deletedAt)];
-    if (query.status) conditions.push(eq(articles.status, query.status as ArticleRow['status']));
-    if (query.topicId) conditions.push(eq(articles.topicId, query.topicId));
-    if (query.q) conditions.push(ilike(articles.title, `%${query.q}%`));
+      const query = request.query;
+      const { limit, offset } = parseListPagination(query);
+      const conditions = [isNull(articles.deletedAt)];
+      if (query.status) conditions.push(eq(articles.status, query.status as ArticleRow['status']));
+      if (query.topicId) conditions.push(eq(articles.topicId, query.topicId));
+      if (query.q) conditions.push(ilike(articles.title, `%${escapeLikePattern(query.q)}%`));
 
-    const rows = await app.database
-      .select()
-      .from(articles)
-      .where(and(...conditions))
-      .orderBy(desc(articles.recordUpdatedAt));
+      const rows = await app.database
+        .select()
+        .from(articles)
+        .where(and(...conditions))
+        .orderBy(desc(articles.recordUpdatedAt))
+        .limit(limit)
+        .offset(offset);
 
-    let filteredRows = rows;
-    if (query.tagId) {
-      const taggedIds = new Set(
-        (
-          await app.database
-            .select({ articleId: articleTags.articleId })
-            .from(articleTags)
-            .where(eq(articleTags.tagId, query.tagId))
-        ).map((row) => row.articleId),
+      let filteredRows = rows;
+      if (query.tagId) {
+        const taggedIds = new Set(
+          (
+            await app.database
+              .select({ articleId: articleTags.articleId })
+              .from(articleTags)
+              .where(eq(articleTags.tagId, query.tagId))
+          ).map((row) => row.articleId),
+        );
+        filteredRows = rows.filter((row) => taggedIds.has(row.id));
+      }
+
+      const topicNames = await topicMapForArticles(app.database);
+      const tagNames = await tagsForArticles(
+        app.database,
+        filteredRows.map((row) => row.id),
       );
-      filteredRows = rows.filter((row) => taggedIds.has(row.id));
-    }
 
-    const topicNames = await topicMapForArticles(app.database);
-    const tagNames = await tagsForArticles(
-      app.database,
-      filteredRows.map((row) => row.id),
-    );
+      return filteredRows.map((row) =>
+        listArticle(row, topicNames.get(row.topicId ?? '') ?? null, tagNames.get(row.id) ?? []),
+      );
+    },
+  );
 
-    return filteredRows.map((row) =>
-      publicArticle(row, topicNames.get(row.topicId ?? '') ?? null, tagNames.get(row.id) ?? []),
-    );
-  });
+  app.get(
+    '/v1/articles/:slug',
+    {
+      schema: {
+        response: {
+          200: articleResponseSchema,
+          404: errorResponseSchema,
+          503: errorResponseSchema,
+        },
+      },
+    },
+    async (request: ArticleSlugRequest, reply) => {
+      if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
 
-  app.get('/v1/articles/:slug', async (request: ArticleSlugRequest, reply) => {
-    if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
+      const [row] = await app.database
+        .select()
+        .from(articles)
+        .where(and(articleIdentifier(request.params.slug), isNull(articles.deletedAt)));
 
-    const [row] = await app.database
-      .select()
-      .from(articles)
-      .where(and(articleIdentifier(request.params.slug), isNull(articles.deletedAt)));
+      if (!row) return reply.status(404).send({ error: 'article_not_found' });
 
-    if (!row) return reply.status(404).send({ error: 'article_not_found' });
+      const tagRows = await app.database
+        .select({ name: tags.name })
+        .from(articleTags)
+        .innerJoin(tags, eq(tags.id, articleTags.tagId))
+        .where(eq(articleTags.articleId, row.id));
 
-    const tagRows = await app.database
-      .select({ name: tags.name })
-      .from(articleTags)
-      .innerJoin(tags, eq(tags.id, articleTags.tagId))
-      .where(eq(articleTags.articleId, row.id));
-
-    return publicArticle(
-      row,
-      await topicNameForArticle(app.database, row.topicId),
-      tagRows.map((row) => row.name).sort((a, b) => a.localeCompare(b, 'zh-CN')),
-    );
-  });
+      return publicArticle(
+        row,
+        await topicNameForArticle(app.database, row.topicId),
+        tagRows.map((row) => row.name).sort((a, b) => a.localeCompare(b, 'zh-CN')),
+      );
+    },
+  );
 
   app.post(
     '/v1/articles',
-    { schema: { body: createArticleBodySchema } },
+    {
+      schema: {
+        body: createArticleBodySchema,
+        response: {
+          201: articleResponseSchema,
+          400: errorResponseSchema,
+          409: errorResponseSchema,
+          503: errorResponseSchema,
+        },
+      },
+    },
     async (request: CreateArticleRequest, reply) => {
       if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
 
@@ -286,6 +391,11 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
       }
 
       try {
+        ensureOptionalHttpUrl(body.sourceUrl, 'invalid_source_url');
+        ensureOptionalHttpUrl(body.sourceSiteIconUrl, 'invalid_source_site_icon_url');
+        ensureOptionalHttpUrl(body.cover, 'invalid_cover_url');
+        ensureOptionalAssetId(body.coverAssetId);
+
         const article = await app.database.transaction(async (tx) => {
           const topic = await ensureTopic(tx, body.topicId, body.topicName);
           const slug = await generateUniqueSlug(tx, body.slug || title);
@@ -354,12 +464,28 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
 
   app.patch(
     '/v1/articles/:slug',
-    { schema: { body: updateArticleBodySchema } },
+    {
+      schema: {
+        body: updateArticleBodySchema,
+        response: {
+          200: articleResponseSchema,
+          400: errorResponseSchema,
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+          503: errorResponseSchema,
+        },
+      },
+    },
     async (request: UpdateArticleRequest, reply) => {
       if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
 
       const body = request.body;
       try {
+        ensureOptionalHttpUrl(body.sourceUrl, 'invalid_source_url');
+        ensureOptionalHttpUrl(body.sourceSiteIconUrl, 'invalid_source_site_icon_url');
+        ensureOptionalHttpUrl(body.cover, 'invalid_cover_url');
+        ensureOptionalAssetId(body.coverAssetId);
+
         const article = await app.database.transaction(async (tx) => {
           const [current] = await tx
             .select()
@@ -377,9 +503,11 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
           }
 
           const topic =
-            body.topicId !== undefined || body.topicName !== undefined
-              ? await ensureTopic(tx, body.topicId, body.topicName)
-              : null;
+            body.topicId === null
+              ? null
+              : body.topicId !== undefined || body.topicName !== undefined
+                ? await ensureTopic(tx, body.topicId, body.topicName)
+                : null;
 
           const nextDescription = body.description ?? current.description;
           if (body.status === 'published' && !nextDescription.trim()) {
