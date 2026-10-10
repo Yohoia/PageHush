@@ -12,9 +12,15 @@ import {
   applicationStageListSchema,
   applicationStages,
 } from '@pagehush/shared';
-import { readAuthConfig, readDatabaseConfig, readStorageConfig } from './config.js';
-import { createDatabase } from './db/client.js';
-import { MinIOStorage } from './storage/minio.js';
+import {
+  readAuthConfig,
+  readDatabaseConfig,
+  readStorageConfig,
+  type AuthConfig,
+} from './config.js';
+import { createDatabase, type DatabaseHandle } from './db/client.js';
+import { MinIOAdapter } from './storage/minio.js';
+import type { StoragePort } from './storage/port.js';
 import type { PageHushFastifyInstance } from './types/fastify.js';
 import { articleRoutes } from './routes/articles.js';
 import { assetRoutes } from './routes/assets.js';
@@ -22,31 +28,31 @@ import { topicRoutes } from './routes/topics.js';
 import { tagRoutes } from './routes/tags.js';
 import { authRoutes, findValidSession } from './routes/auth.js';
 
+/** Dependencies can be injected so route behaviour is testable without live services. */
 export interface BuildServerOptions {
-  databaseUrl?: string;
+  database?: DatabaseHandle;
+  storage?: StoragePort;
+  authConfig?: AuthConfig;
 }
 
 export async function buildServer(options: BuildServerOptions = {}) {
-  const databaseConfig = options.databaseUrl ? { url: options.databaseUrl } : readDatabaseConfig();
+  const databaseConfig = readDatabaseConfig();
   const storageConfig = readStorageConfig();
-  const authConfig = readAuthConfig();
+  const authConfig = options.authConfig ?? readAuthConfig();
 
   const app = Fastify({
     logger: { level: process.env.PAGEHUSH_API_LOG_LEVEL ?? 'info' },
   }).withTypeProvider<TypeBoxTypeProvider>() as PageHushFastifyInstance;
 
-  const database = databaseConfig ? createDatabase(databaseConfig.url) : null;
-  const storage = storageConfig ? new MinIOStorage(storageConfig) : null;
-  const decorations = app as unknown as {
-    decorate(name: string, value: unknown): void;
-  };
+  const database = options.database ?? (databaseConfig ? createDatabase(databaseConfig.url) : null);
+  const storage = options.storage ?? (storageConfig ? new MinIOAdapter(storageConfig) : null);
 
-  decorations.decorate('database', database?.db ?? null);
-  decorations.decorate('databaseHandle', database);
-  decorations.decorate('storage', storage);
-  decorations.decorate('databaseConfigured', Boolean(database));
-  decorations.decorate('authConfig', authConfig);
-  decorations.decorate('storageConfigured', Boolean(storage));
+  app.decorate('database', database?.db ?? null);
+  app.decorate('databaseHandle', database);
+  app.decorate('storage', storage);
+  app.decorate('databaseConfigured', Boolean(database));
+  app.decorate('authConfig', authConfig);
+  app.decorate('storageConfigured', Boolean(storage));
 
   await app.register(cookie);
   await app.register(helmet, { contentSecurityPolicy: false });
@@ -55,8 +61,24 @@ export async function buildServer(options: BuildServerOptions = {}) {
     timeWindow: '1 minute',
   });
 
+  const corsOrigins = (process.env.PAGEHUSH_API_CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   if (process.env.PAGEHUSH_API_ENABLE_CORS === 'true') {
-    await app.register(cors, { origin: true, credentials: true });
+    if (!corsOrigins.length) {
+      app.log.warn(
+        'PAGEHUSH_API_CORS_ORIGINS is empty; refusing to enable CORS with reflected origins',
+      );
+    } else {
+      await app.register(cors, {
+        origin(origin, callback) {
+          callback(null, Boolean(origin && corsOrigins.includes(origin)));
+        },
+        credentials: true,
+      });
+    }
   }
 
   const publicApiRoutes = new Set([
@@ -67,6 +89,21 @@ export async function buildServer(options: BuildServerOptions = {}) {
     'GET /v1/auth/session',
     'DELETE /v1/auth/logout',
   ]);
+
+  // Unhandled 5xx errors must not leak driver or SQL details to clients.
+  app.setErrorHandler((error: unknown, request, reply) => {
+    const statusCode =
+      (typeof error === 'object' && error !== null && 'statusCode' in error
+        ? (error as { statusCode?: number }).statusCode
+        : undefined) ?? 500;
+
+    if (statusCode < 500) {
+      return reply.status(statusCode).send(error);
+    }
+
+    request.log.error(error);
+    return reply.status(500).send({ error: 'internal_error' });
+  });
 
   app.addHook('preHandler', async (request, reply) => {
     if (request.method === 'OPTIONS') return;

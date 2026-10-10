@@ -3,7 +3,7 @@ import type { FastifyBaseLogger, FastifyInstance, RawServerDefault } from 'fasti
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import type { Database, DatabaseHandle } from '../db/client.js';
 import type { AuthConfig } from '../config.js';
-import type { MinIOStorage } from '../storage/minio.js';
+import type { StoragePort } from '../storage/port.js';
 
 export interface PageHushAuthSession {
   id: string;
@@ -17,20 +17,20 @@ export interface PageHushFastifyInstance extends FastifyInstance<
   FastifyBaseLogger,
   TypeBoxTypeProvider
 > {
-  database?: Database;
-  databaseHandle?: DatabaseHandle;
-  storage?: MinIOStorage;
-  authConfig?: AuthConfig;
+  database?: Database | null;
+  databaseHandle?: DatabaseHandle | null;
+  storage?: StoragePort | null;
+  authConfig?: AuthConfig | null;
   databaseConfigured: boolean;
   storageConfigured: boolean;
 }
 
 declare module 'fastify' {
   interface FastifyInstance {
-    database?: Database;
-    databaseHandle?: DatabaseHandle;
-    storage?: MinIOStorage;
-    authConfig?: AuthConfig;
+    database?: Database | null;
+    databaseHandle?: DatabaseHandle | null;
+    storage?: StoragePort | null;
+    authConfig?: AuthConfig | null;
     databaseConfigured: boolean;
     storageConfigured: boolean;
   }

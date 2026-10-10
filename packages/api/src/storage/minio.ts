@@ -1,5 +1,7 @@
 import {
+  CopyObjectCommand,
   CreateBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
@@ -9,22 +11,9 @@ import { Readable } from 'node:stream';
 import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
 import type { BucketLocationConstraint } from '@aws-sdk/client-s3';
 import type { StorageConfig } from '../config.js';
+import type { PutAssetInput, StoragePort, StoredObject } from './port.js';
 
-export interface PutAssetInput {
-  key: string;
-  body: Buffer;
-  contentType: string;
-}
-
-export interface MinIOObject {
-  body: Readable;
-  contentType?: string;
-  contentLength?: number;
-  etag?: string;
-  lastModified?: Date;
-}
-
-export class MinIOStorage {
+export class MinIOAdapter implements StoragePort {
   readonly #client: S3Client;
   readonly #config: StorageConfig;
 
@@ -78,7 +67,7 @@ export class MinIOStorage {
     };
   }
 
-  async getObject(key: string): Promise<MinIOObject> {
+  async getObject(key: string): Promise<StoredObject> {
     const result = await this.#client.send(
       new GetObjectCommand({ Bucket: this.#config.bucket, Key: key }),
     );
@@ -94,6 +83,20 @@ export class MinIOStorage {
       etag: result.ETag,
       lastModified: result.LastModified,
     };
+  }
+
+  async copyObject(sourceKey: string, destinationKey: string) {
+    await this.#client.send(
+      new CopyObjectCommand({
+        Bucket: this.#config.bucket,
+        CopySource: `${this.#config.bucket}/${sourceKey}`,
+        Key: destinationKey,
+      }),
+    );
+  }
+
+  async deleteObject(key: string) {
+    await this.#client.send(new DeleteObjectCommand({ Bucket: this.#config.bucket, Key: key }));
   }
 
   async health() {
