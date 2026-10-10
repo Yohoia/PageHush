@@ -6,6 +6,7 @@ import { EditorContent, EditorContext, useEditor } from '@tiptap/react';
 // --- Tiptap Core Extensions ---
 import { StarterKit } from '@tiptap/starter-kit';
 import { Image } from '@tiptap/extension-image';
+import { TableKit } from '@tiptap/extension-table';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { Typography } from '@tiptap/extension-typography';
@@ -31,6 +32,7 @@ import '@/components/tiptap-node/code-block-node/code-block-node.scss';
 import '@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss';
 import '@/components/tiptap-node/list-node/list-node.scss';
 import '@/components/tiptap-node/image-node/image-node.scss';
+import '@/components/tiptap-node/table-node/table-node.scss';
 import '@/components/tiptap-node/heading-node/heading-node.scss';
 import '@/components/tiptap-node/paragraph-node/paragraph-node.scss';
 
@@ -241,6 +243,7 @@ export function SimpleEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),
+      TableKit.configure({ table: { resizable: true, renderWrapper: true } }),
       Image.configure({
         HTMLAttributes: {
           // WeChat and some publishers replace cross-origin images when the source

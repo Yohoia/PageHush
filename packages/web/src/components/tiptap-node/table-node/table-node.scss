@@ -1,0 +1,38 @@
+.tiptap.ProseMirror {
+  .tableWrapper {
+    width: 100%;
+    margin: 2rem 0;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  th,
+  td {
+    min-width: 5rem;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--tt-border-color);
+    vertical-align: top;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  th {
+    color: var(--tt-gray-light-a-900, inherit);
+    background: var(--tt-gray-light-a-100, rgba(0, 0, 0, 0.03));
+    font-weight: 650;
+  }
+
+  th > p,
+  td > p {
+    margin: 0;
+  }
+
+  .selectedCell::after {
+    border-radius: 0;
+  }
+}
