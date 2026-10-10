@@ -709,6 +709,7 @@ export function EditorPage() {
                       <img
                         src={cover ?? DEFAULT_ARTICLE_COVER}
                         alt={cover ? '文章封面' : '默认封面占位图'}
+                        referrerPolicy="no-referrer"
                       />
                       <label
                         className="editor-cover-action"

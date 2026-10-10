@@ -313,6 +313,7 @@ export function LibraryPage() {
                     alt=""
                     loading="lazy"
                     decoding="async"
+                    referrerPolicy="no-referrer"
                   />
                   <div className="article-card-meta">
                     <span className="article-card-topic">{article.topic}</span>
@@ -334,7 +335,12 @@ export function LibraryPage() {
                       onClick={(event) => event.stopPropagation()}
                     >
                       {article.sourceSiteIconUrl ? (
-                        <img src={article.sourceSiteIconUrl} alt="" loading="lazy" />
+                        <img
+                          src={article.sourceSiteIconUrl}
+                          alt=""
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
                       ) : null}
                       <span>{article.sourceSiteName || new URL(article.sourceUrl).hostname}</span>
                       {article.clipType ? (

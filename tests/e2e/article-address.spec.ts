@@ -115,20 +115,32 @@ test('a newly saved article navigates to its short address', async ({ page }) =>
   expect(savedTitle).toBe('新建的中文文章');
 });
 
-test('editor images do not send the PageHush referrer to external publishers', async ({ page }) => {
-  await page.route(`**/v1/articles/${id}`, (route) =>
-    route.fulfill({
-      json: {
-        ...tocArticle,
-        id,
-        shortId,
-        slug: legacySlug,
-        content: '## 外链图片\n\n![微信公众号图片](https://example.com/image.png)',
-      },
-    }),
+test('external article covers and body images do not send the PageHush referrer', async ({ page }) => {
+  const externalArticle = {
+    ...tocArticle,
+    id,
+    shortId,
+    slug: legacySlug,
+    cover: 'https://example.com/cover.png',
+    sourceSiteIconUrl: 'https://example.com/favicon.png',
+    sourceUrl: 'https://example.com/article',
+    content: '## 外链图片\n\n![微信公众号图片](https://example.com/image.png)',
+  };
+  await page.route('**/v1/articles', (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: [externalArticle] });
+    return route.fulfill({ json: [] });
+  });
+  await page.route(`**/v1/articles/${id}`, (route) => route.fulfill({ json: externalArticle }));
+
+  await page.goto('/');
+  const cardCover = page.locator('.article-card-media').first();
+  await expect(cardCover).toHaveAttribute('referrerpolicy', 'no-referrer');
+  await page.getByRole('link', { name: `进入文章：${tocArticle.title}` }).click();
+  await expect(page).toHaveURL(canonicalPath);
+  await expect(page.locator('.editor-cover img')).toHaveAttribute(
+    'referrerpolicy',
+    'no-referrer',
   );
-  await page.goto(canonicalPath);
-  await expect(page.getByLabel('正文编辑区')).toBeVisible();
   await expect(page.locator('.ProseMirror img')).toHaveAttribute(
     'referrerpolicy',
     'no-referrer',
