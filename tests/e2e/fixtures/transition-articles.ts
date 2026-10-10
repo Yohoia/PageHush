@@ -1,9 +1,28 @@
 import type { ApiArticle } from '../../../packages/web/src/lib/api';
 import { tocArticle, tocFixtureResponse } from './toc-article';
 
+const optionalArticleFields = {
+  shortId: null,
+  author: 'Yohoia',
+  sourceUrl: null,
+  sourceSiteName: null,
+  sourceSiteIconUrl: null,
+  sourcePublishedAt: null,
+  clipType: null,
+  wordCount: null,
+  readingTimeMinutes: null,
+  sourceChecksum: null,
+  coverAssetId: null,
+  coverAlt: null,
+  updatedAt: null,
+  recordCreatedAt: '2026-10-09T00:00:00.000Z',
+  recordUpdatedAt: '2026-10-09T00:00:00.000Z',
+} as const;
+
 export const transitionArticles: ApiArticle[] = [
   {
     ...tocArticle,
+    ...optionalArticleFields,
     format: 'md',
     status: 'draft',
     language: 'zh',
@@ -13,6 +32,7 @@ export const transitionArticles: ApiArticle[] = [
   },
   {
     ...tocArticle,
+    ...optionalArticleFields,
     format: 'md',
     status: 'draft',
     language: 'zh',
@@ -24,6 +44,7 @@ export const transitionArticles: ApiArticle[] = [
   },
   {
     ...tocArticle,
+    ...optionalArticleFields,
     format: 'md',
     status: 'draft',
     language: 'zh',

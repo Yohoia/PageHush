@@ -1,9 +1,9 @@
-import type { ApiArticle } from './api';
+import type { ApiArticleListItem } from './api';
 
 // A single in-memory handoff from the clicked card; never persisted or used as authorization.
-let incoming: { article: ApiArticle; created: number } | undefined;
+let incoming: { article: ApiArticleListItem; created: number } | undefined;
 
-export function handoffArticle(article: ApiArticle) {
+export function handoffArticle(article: ApiArticleListItem) {
   incoming = { article, created: Date.now() };
 }
 

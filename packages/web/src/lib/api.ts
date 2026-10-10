@@ -1,100 +1,26 @@
-export interface ApiTopic {
-  id: string;
-  name: string;
-  articleCount: number;
-}
+import type {
+  ArticleListItemResponse,
+  ArticleResponse,
+  AssetResponse,
+  AuthLoginResponse,
+  AuthSessionResponse,
+  CreateArticleBody,
+  TagResponse,
+  TopicResponse,
+} from '@pagehush/shared';
 
-export interface ApiTag {
-  id: string;
-  name: string;
-  articleCount: number;
-}
+export type ApiTopic = TopicResponse;
+export type ApiTag = TagResponse;
+export type ApiClipType = NonNullable<ArticleResponse['clipType']>;
+export type ApiArticle = ArticleResponse;
+/** List responses omit article content; only the detail endpoint is guaranteed to include it. */
+export type ApiArticleListItem = ArticleListItemResponse;
+export type ApiAsset = AssetResponse;
 
-export type ApiClipType =
-  | 'article'
-  | 'selection'
-  | 'bookmark'
-  | 'screenshot'
-  | 'simplified'
-  | 'full_page'
-  | 'pdf'
-  | 'email';
+export type AuthSession = AuthSessionResponse;
+export type AuthLoginResult = AuthLoginResponse;
 
-export interface ApiArticle {
-  id: string;
-  shortId?: string | null;
-  slug: string;
-  title: string;
-  description: string;
-  content: string;
-  format: 'md' | 'mdx';
-  status: 'draft' | 'published';
-  language: 'zh' | 'en';
-  author: string | null;
-  sourceUrl?: string | null;
-  sourceSiteName?: string | null;
-  sourceSiteIconUrl?: string | null;
-  sourcePublishedAt?: string | null;
-  clipType?: ApiClipType | null;
-  wordCount?: number | null;
-  readingTimeMinutes?: number | null;
-  sourceChecksum?: string | null;
-  topic: string | null;
-  topicId: string | null;
-  tags: string[];
-  cover: string | null;
-  coverAssetId: string | null;
-  coverAlt: string | null;
-  publishedAt: string;
-  updatedAt: string | null;
-  recordCreatedAt: string;
-  recordUpdatedAt: string;
-}
-
-export interface ApiAsset {
-  id: string;
-  objectKey: string;
-  originalName: string | null;
-  mimeType: string;
-  size: number;
-  checksum: string;
-  kind: 'cover' | 'inline_image' | 'attachment';
-  status: 'uploading' | 'ready' | 'deleted';
-  url: string;
-}
-
-export interface AuthSession {
-  authenticated: boolean;
-  expiresAt?: string;
-  remember?: boolean;
-}
-
-export interface ArticleSavePayload {
-  title: string;
-  sourceUrl?: string | null;
-  sourceSiteName?: string | null;
-  sourceSiteIconUrl?: string | null;
-  sourcePublishedAt?: string | null;
-  clipType?: ApiClipType | null;
-  wordCount?: number | null;
-  readingTimeMinutes?: number | null;
-  sourceChecksum?: string | null;
-  slug?: string;
-  description?: string;
-  content?: string;
-  format?: 'md' | 'mdx';
-  status?: 'draft' | 'published';
-  language?: 'zh' | 'en';
-  author?: string | null;
-  publishedAt?: string;
-  updatedAt?: string | null;
-  topicName?: string;
-  topicId?: string | null;
-  coverAssetId?: string | null;
-  cover?: string | null;
-  coverAlt?: string | null;
-  tagNames?: string[];
-}
+export type ArticleSavePayload = CreateArticleBody;
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -110,6 +36,8 @@ export class ApiError extends Error {
   }
 }
 
+// Authentication relies on the same-origin session cookie (Vite proxies /v1 in development).
+// If API_BASE_URL is ever pointed at another origin, credentials and CORS must be configured.
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -139,7 +67,7 @@ export function getAuthSession() {
 }
 
 export function loginWithAccessCode(accessCode: string, remember: boolean) {
-  return request<AuthSession>('/v1/auth/login', {
+  return request<AuthLoginResult>('/v1/auth/login', {
     method: 'POST',
     body: JSON.stringify({ accessCode, remember }),
   });
@@ -149,8 +77,23 @@ export function logout() {
   return request<void>('/v1/auth/logout', { method: 'DELETE' });
 }
 
-export function listArticles() {
-  return request<ApiArticle[]>('/v1/articles');
+const LIST_PAGE_SIZE = 200;
+const MAX_LIST_PAGES = 20;
+
+export async function listArticles() {
+  const articles: ApiArticleListItem[] = [];
+
+  for (let page = 0; page < MAX_LIST_PAGES; page += 1) {
+    const params = new URLSearchParams({
+      limit: String(LIST_PAGE_SIZE),
+      offset: String(page * LIST_PAGE_SIZE),
+    });
+    const data = await request<ApiArticleListItem[]>(`/v1/articles?${params}`);
+    articles.push(...data);
+    if (data.length < LIST_PAGE_SIZE) break;
+  }
+
+  return articles;
 }
 
 export function getArticle(slug: string) {

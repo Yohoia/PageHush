@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router';
-import type { ApiArticle } from '@/lib/api';
+import type { ApiArticleListItem } from '@/lib/api';
 import { handoffArticle } from '@/lib/article-handoff';
 import { preloadEditorPage } from '@/lib/editor-route';
 import { openWithCoverTransition } from '@/lib/cover-transition';
@@ -10,7 +10,7 @@ export function ArticleOpenLink({
   article,
   onOpen,
 }: {
-  article: ApiArticle | (typeof articles)[number];
+  article: ApiArticleListItem | (typeof articles)[number];
   onOpen: () => void;
 }) {
   const navigate = useNavigate();

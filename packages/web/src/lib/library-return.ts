@@ -1,8 +1,8 @@
-import type { ApiArticle } from './api';
+import type { ApiArticleListItem } from './api';
 import type { articles } from '@/data/articles';
 
 interface LibraryReturn {
-  articles: Array<ApiArticle | (typeof articles)[number]>;
+  articles: Array<ApiArticleListItem | (typeof articles)[number]>;
   url: string;
   slug: string;
   scrollY: number;
