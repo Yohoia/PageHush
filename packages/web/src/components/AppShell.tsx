@@ -17,7 +17,9 @@ export function AppShell() {
   const location = useLocation();
   const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'guest'>('checking');
   const isEditorRoute =
-    location.pathname === '/editor' || location.pathname.startsWith('/articles/');
+    location.pathname === '/editor' ||
+    location.pathname.startsWith('/articles/') ||
+    location.pathname.startsWith('/a/');
   const isLibraryReturn =
     !isEditorRoute && Boolean(peekLibraryReturn(location.pathname + location.search));
 
@@ -54,7 +56,7 @@ export function AppShell() {
   }
 
   if (authState === 'guest') {
-    const redirect = encodeURIComponent(location.pathname + location.search);
+    const redirect = encodeURIComponent(location.pathname + location.search + location.hash);
     return <Navigate to={`/login?redirect=${redirect}`} replace />;
   }
 

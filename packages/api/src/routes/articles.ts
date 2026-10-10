@@ -6,6 +6,7 @@ import { and, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
 import { assets, articles, articleTags, tags, topics } from '../db/schema.js';
 import { createArticleBodySchema, updateArticleBodySchema } from './schemas.js';
 import { isUniqueConstraintError, normalizeName, slugify, uniqueSlugSuffix } from './utils.js';
+import { articleShortId } from '@pagehush/shared';
 
 type ArticleListRequest = FastifyRequest<{
   Querystring: { status?: string; topicId?: string; tagId?: string; q?: string };
@@ -57,6 +58,7 @@ function articleCoverUrl(row: Pick<ArticleRow, 'coverAssetId' | 'coverUrl'>) {
 function publicArticle(row: ArticleRow, topicName: string | null, tagNames: string[]) {
   return {
     id: row.id,
+    shortId: articleShortId(row.id),
     slug: row.slug,
     title: row.title,
     description: row.description,

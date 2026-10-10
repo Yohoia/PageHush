@@ -1,5 +1,7 @@
 import { Type, type Static } from 'typebox';
 
+export { articleShortId, articleIdFromShortId } from './article-address.js';
+
 export const API_PREFIX = '/v1';
 
 export const healthResponseSchema = Type.Object({

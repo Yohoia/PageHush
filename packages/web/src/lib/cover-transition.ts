@@ -119,7 +119,7 @@ function waitForCover(slug: string, signal: AbortSignal): Promise<HTMLImageEleme
     const check = () => {
       const page = document.querySelector<HTMLElement>('.editor-page');
       const image = page?.querySelector<HTMLImageElement>('.editor-cover img');
-      if (page?.dataset.articleSlug !== slug || !image || !image.getBoundingClientRect().width)
+      if (page?.dataset.articleKey !== slug || !image || !image.getBoundingClientRect().width)
         return;
       void image.decode().then(
         () => finish(image),

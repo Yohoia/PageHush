@@ -20,8 +20,8 @@ function EditorRouteFallback() {
 }
 
 function EditorRoute() {
-  const { articleSlug } = useParams();
-  return <EditorPage key={articleSlug ?? 'new'} />;
+  const { articleSlug, articleKey } = useParams();
+  return <EditorPage key={articleKey ?? articleSlug ?? 'new'} />;
 }
 
 export function App() {
@@ -40,6 +40,14 @@ export function App() {
         />
         <Route path="library" element={<Navigate to="/" replace />} />
         <Route path="settings" element={<Navigate to="/" replace />} />
+        <Route
+          path="a/:articleKey"
+          element={
+            <Suspense fallback={<EditorRouteFallback />}>
+              <EditorRoute />
+            </Suspense>
+          }
+        />
         <Route
           path="articles/:articleSlug"
           element={

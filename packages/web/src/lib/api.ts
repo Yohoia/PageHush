@@ -22,6 +22,7 @@ export type ApiClipType =
 
 export interface ApiArticle {
   id: string;
+  shortId?: string | null;
   slug: string;
   title: string;
   description: string;
@@ -153,7 +154,7 @@ export function listArticles() {
 }
 
 export function getArticle(slug: string) {
-  return request<ApiArticle>(`/v1/articles/${slug}`);
+  return request<ApiArticle>(`/v1/articles/${encodeURIComponent(slug)}`);
 }
 
 export function createArticle(payload: ArticleSavePayload) {
@@ -164,14 +165,14 @@ export function createArticle(payload: ArticleSavePayload) {
 }
 
 export function updateArticle(slug: string, payload: Partial<ArticleSavePayload>) {
-  return request<ApiArticle>(`/v1/articles/${slug}`, {
+  return request<ApiArticle>(`/v1/articles/${encodeURIComponent(slug)}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
 }
 
 export function deleteArticle(slug: string) {
-  return request<void>(`/v1/articles/${slug}`, { method: 'DELETE' });
+  return request<void>(`/v1/articles/${encodeURIComponent(slug)}`, { method: 'DELETE' });
 }
 
 export function listTopics() {

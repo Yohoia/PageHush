@@ -8,11 +8,13 @@ export function handoffArticle(article: ApiArticle) {
 }
 
 export function getArticleHandoff(slug: string | undefined) {
-  return incoming && incoming.article.slug === slug && Date.now() - incoming.created < 15_000
+  return incoming &&
+    (incoming.article.slug === slug || incoming.article.id === slug) &&
+    Date.now() - incoming.created < 15_000
     ? incoming.article
     : undefined;
 }
 
 export function clearArticleHandoff(slug: string) {
-  if (incoming?.article.slug === slug) incoming = undefined;
+  if (incoming?.article.slug === slug || incoming?.article.id === slug) incoming = undefined;
 }

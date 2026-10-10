@@ -4,6 +4,7 @@ import { handoffArticle } from '@/lib/article-handoff';
 import { preloadEditorPage } from '@/lib/editor-route';
 import { openWithCoverTransition } from '@/lib/cover-transition';
 import type { articles } from '@/data/articles';
+import { articlePath } from '@/lib/article-address';
 
 export function ArticleOpenLink({
   article,
@@ -13,12 +14,13 @@ export function ArticleOpenLink({
   onOpen: () => void;
 }) {
   const navigate = useNavigate();
+  const path = articlePath(article);
   const prepare = () => {
     void preloadEditorPage().catch(() => undefined);
   };
   return (
     <Link
-      to={`/articles/${article.slug}`}
+      to={path}
       className="article-card-open-link"
       aria-label={`进入文章：${article.title}`}
       onPointerEnter={prepare}
@@ -39,10 +41,10 @@ export function ArticleOpenLink({
           event.currentTarget
             .closest('.article-card')
             ?.querySelector<HTMLImageElement>('.article-card-media') ?? null;
-        openWithCoverTransition(article.slug, image, () => {
+        openWithCoverTransition(decodeURIComponent(path.split('/').pop()!), image, () => {
           onOpen();
           if ('coverAssetId' in article) handoffArticle(article);
-          void navigate(`/articles/${article.slug}`);
+          void navigate(path);
         });
       }}
     >

@@ -241,7 +241,13 @@ export function SimpleEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),
-      Image,
+      Image.configure({
+        HTMLAttributes: {
+          // WeChat and some publishers replace cross-origin images when the source
+          // page's referrer is sent. External article images remain readable.
+          referrerpolicy: 'no-referrer',
+        },
+      }),
       Typography,
       Superscript,
       Subscript,

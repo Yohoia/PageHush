@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useEffectEvent,
   useId,
   useLayoutEffect,
   useMemo,
@@ -16,7 +17,9 @@ import { ArticleToc, type ArticleTocVariant } from '@/components/ArticleToc';
 import { useEditorFullscreen } from '@/hooks/use-editor-fullscreen';
 import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
 import { articleTopics, articles, defaultArticleContent, MAX_ARTICLE_TAGS } from '@/data/articles';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
+import { articleIdFromShortId } from '@pagehush/shared';
+import { articlePath } from '@/lib/article-address';
 import { motion } from 'motion/react';
 import { clearArticleHandoff, getArticleHandoff } from '@/lib/article-handoff';
 import { DEFAULT_ARTICLE_COVER } from '@/lib/article-cover';
@@ -60,8 +63,20 @@ function normalizeTaxonomyValue(value: string): string {
 const MAX_COVER_FILE_SIZE = 5 * 1024 * 1024;
 
 export function EditorPage() {
-  const { articleSlug } = useParams();
+  const { articleSlug: legacySlug, articleKey } = useParams();
+  const decodedId = articleKey ? articleIdFromShortId(articleKey) : null;
+  const articleSlug = legacySlug ?? decodedId ?? articleKey;
+  const location = useLocation();
   const navigate = useNavigate();
+  const canonicalizeAddress = useEffectEvent((data: ApiArticle) => {
+    const path = articlePath(data);
+    if (!legacySlug || !path.startsWith('/a/')) return false;
+    navigate(path + location.search + location.hash, {
+      replace: true,
+      state: location.state,
+    });
+    return true;
+  });
   const [searchParams] = useSearchParams();
   const tocParam = searchParams.get('toc');
   const compactParam = searchParams.get('tocCompact');
@@ -193,6 +208,12 @@ export function EditorPage() {
   useEffect(() => {
     if (!articleSlug) return;
 
+    if (articleKey && !decodedId) {
+      setArticleError('文章地址无效，请检查链接后重试');
+      setArticleLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setArticleLoading(true);
     setArticleError(null);
@@ -200,6 +221,8 @@ export function EditorPage() {
     getArticle(articleSlug)
       .then((data) => {
         if (cancelled) return;
+
+        if (canonicalizeAddress(data)) return;
 
         setRemoteArticle(data);
         setTitle(data.title);
@@ -228,11 +251,10 @@ export function EditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [articleSlug]);
+  }, [articleSlug, articleKey, decodedId]);
 
   useEffect(() => {
     let cancelled = false;
-    setArticleError(null);
 
     listTopics()
       .then((data) => {
@@ -383,7 +405,7 @@ export function EditorPage() {
       };
 
       const saved = remoteArticle
-        ? await updateArticle(remoteArticle.slug, payload)
+        ? await updateArticle(remoteArticle.id, payload)
         : await createArticle(payload);
 
       setRemoteArticle(saved);
@@ -395,7 +417,7 @@ export function EditorPage() {
       setSaveState('saved');
 
       if (!remoteArticle) {
-        navigate(`/articles/${saved.slug}`, { replace: true });
+        navigate(articlePath(saved), { replace: true });
       }
     } catch (error) {
       setSaveError(
@@ -416,7 +438,7 @@ export function EditorPage() {
     actionLockRef.current = true;
     setIsSaving(true);
     try {
-      await deleteArticle(remoteArticle.slug);
+      await deleteArticle(remoteArticle.id);
       navigate('/', { replace: true });
     } catch {
       throw new Error('删除失败，请检查连接后重试');
@@ -493,6 +515,7 @@ export function EditorPage() {
       ref={rootRef}
       className={`editor-page ${isFullscreen ? 'is-fullscreen' : ''} ${isScrolled ? 'is-scrolled' : ''}`}
       data-article-slug={articleSlug}
+      data-article-key={articleKey ?? legacySlug}
       aria-busy={articleLoading}
     >
       {articleError ? (

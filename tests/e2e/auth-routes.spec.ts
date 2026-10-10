@@ -6,7 +6,12 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-for (const path of ['/articles/demo', '/editor/demo', '/editor/demo-anything']) {
+for (const path of [
+  '/a/4YkJujCuMdUBwvEW6pLoAt',
+  '/articles/demo',
+  '/editor/demo',
+  '/editor/demo-anything',
+]) {
   test(`requires authentication for ${path}`, async ({ page }) => {
     await page.goto(path);
     await expect(page).toHaveURL(`/login?redirect=${encodeURIComponent(path)}`);
