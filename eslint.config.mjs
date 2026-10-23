@@ -6,6 +6,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/build/**',
+      'pagehush-release/**',
       '**/node_modules/**',
       'design/**/vendor/**',
       'design/**/evidence/**',

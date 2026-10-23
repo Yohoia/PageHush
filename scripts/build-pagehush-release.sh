@@ -41,4 +41,5 @@ cp -a packages/shared/package.json packages/shared/dist pagehush-release/app/pac
 cp packages/web/package.json pagehush-release/app/packages/web/
 cp packages/worker/package.json pagehush-release/app/packages/worker/
 cp scripts/deploy-pagehush.sh pagehush-release/deploy.sh
+cp scripts/backup-pagehush-postgres.sh pagehush-release/backup-postgres.sh
 git rev-parse HEAD > pagehush-release/web/version.txt

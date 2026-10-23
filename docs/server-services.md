@@ -50,7 +50,7 @@ PageHush 和 Astro 博客一样使用 `releases/current` 发布结构，但 Page
 `drizzle-kit` 或其他开发工具。
 
 `scripts/deploy-pagehush.sh` 沿用发布锁，先安装依赖并检查 Nginx，再暂停 API 写入。
-随后执行现有 PostgreSQL 备份脚本（启用 `pipefail`，备份失败即中止），通过 systemd
+随后执行 PostgreSQL 备份脚本（启用 `pipefail`，备份失败即中止），通过 systemd
 加载 API 共用的 `/opt/pagehush/shared/services.env`，在新发布目录运行迁移。
 迁移成功后切换 API，等待就绪，再切换网页。备份或迁移失败时恢复原 API；切换后失败
 则恢复两套旧版本链接。已提交的数据库迁移不自动回退，应用回滚前应确认数据库兼容性。
@@ -58,6 +58,11 @@ PageHush 和 Astro 博客一样使用 `releases/current` 发布结构，但 Page
 部署期间 API 会短暂停止。远程文章管理版本首次上线还需核对迁移记录已包含
 `0005_remote_article_guards`、`0006_device_authorization`，并刷新已打开的旧网页。
 `/v1/ready` 只检查依赖可达，不能代替迁移记录核对。
+
+发布包中的备份脚本同时更新服务器现有的定时备份入口，并为其服务配置共用的
+`EnvironmentFile`。备份和迁移配置均由 systemd 按环境文件格式加载，不以 shell
+`source` 执行，避免访问码哈希中的 `$` 等字符被解释为 shell 表达式。备份先写入
+权限为 `600` 的临时文件，校验压缩文件成功后才替换正式备份。
 
 ## 访问认证
 

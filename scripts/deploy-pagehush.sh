@@ -31,7 +31,7 @@ test -f "$p/app/packages/api/dist/index.js"
 test -f "$p/app/packages/shared/dist/index.js"
 test -f "$p/app/packages/api/scripts/migrate.mjs"
 test -f "$p/app/packages/api/drizzle/meta/_journal.json"
-test -x /opt/pagehush/scripts/backup-postgres.sh
+test -f "$p/backup-postgres.sh"
 v=$(TZ=Asia/Shanghai date +%Y%m%d%H%M%S)
 a=/opt/pagehush/releases/$v
 w=/var/www/pagehush/releases/$v
@@ -47,9 +47,17 @@ find "$w" -type f -exec chmod 640 {} +
   runuser -u pagehush -- env PATH="$PATH" npm_config_cache="$a/.npm-cache" npm ci --omit=dev --workspace=@pagehush/api --workspace=@pagehush/shared --include-workspace-root=false
 )
 nginx -t
+install -m 750 "$p/backup-postgres.sh" /opt/pagehush/scripts/backup-postgres.sh.next
+mv -f /opt/pagehush/scripts/backup-postgres.sh.next /opt/pagehush/scripts/backup-postgres.sh
+mkdir -p /etc/systemd/system/pagehush-backup-postgres.service.d
+printf '[Service]\nEnvironmentFile=/opt/pagehush/shared/services.env\n' \
+  > /etc/systemd/system/pagehush-backup-postgres.service.d/environment.conf
+systemctl daemon-reload
 stopped=1
 systemctl stop pagehush-api
-bash -o pipefail /opt/pagehush/scripts/backup-postgres.sh
+systemd-run --quiet --wait --pipe --collect --unit="pagehush-backup-$v" \
+  --property=EnvironmentFile=/opt/pagehush/shared/services.env \
+  /bin/bash /opt/pagehush/scripts/backup-postgres.sh
 systemd-run --quiet --wait --pipe --collect --unit="pagehush-migrate-$v" \
   --uid=pagehush \
   --property=EnvironmentFile=/opt/pagehush/shared/services.env \
