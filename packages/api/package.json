@@ -10,7 +10,7 @@
     "start": "node --env-file-if-exists=../../.env dist/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "node --env-file-if-exists=../../.env scripts/migrate.mjs",
     "db:studio": "drizzle-kit studio",
     "db:setup": "npm run db:migrate"
   },

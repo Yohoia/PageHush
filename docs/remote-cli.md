@@ -15,7 +15,7 @@ npm run build
 npm run db:migrate
 ```
 
-迁移 `0005_remote_article_guards` 增加文章版本、首次发布日期、操作结果和上传关联。迁移 `0006_device_authorization` 增加设备授权数据。迁移命令使用部署环境的 `DATABASE_URL`，未提供时沿用现有 Drizzle 配置读取本地环境文件的行为。
+迁移 `0005_remote_article_guards` 增加文章版本、首次发布日期、操作结果和上传关联。迁移 `0006_device_authorization` 增加设备授权数据。迁移命令使用进程的 `DATABASE_URL`；本地运行时会加载工作区根目录的 `.env`（若存在），仍未配置时明确失败。自动发布使用 API 共用的 systemd 环境文件注入配置，流程见[服务器服务说明](server-services.md#发布目录与软链接策略)。
 
 网页的修改、发布、撤回和删除请求现在都携带 `If-Match` 文章版本。旧网页缺少版本时收到 HTTP 428。更新后刷新已有浏览器页面，再恢复文章写入。版本过期时 API 返回 HTTP 409，网页保留未保存输入。
 

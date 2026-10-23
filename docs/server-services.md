@@ -45,6 +45,20 @@ PageHush 和 Astro 博客一样使用 `releases/current` 发布结构，但 Page
 - API 切换后重启 `pagehush-api`，前端切换后按需 reload Nginx；
 - 旧版本目录保留用于快速回滚。
 
+发布包由 `scripts/build-pagehush-release.sh` 构建，包含网页、API、迁移入口及
+`packages/api/drizzle` 下的 SQL 和迁移记录。迁移使用 API 的生产依赖，不要求安装
+`drizzle-kit` 或其他开发工具。
+
+`scripts/deploy-pagehush.sh` 沿用发布锁，先安装依赖并检查 Nginx，再暂停 API 写入。
+随后执行现有 PostgreSQL 备份脚本（启用 `pipefail`，备份失败即中止），通过 systemd
+加载 API 共用的 `/opt/pagehush/shared/services.env`，在新发布目录运行迁移。
+迁移成功后切换 API，等待就绪，再切换网页。备份或迁移失败时恢复原 API；切换后失败
+则恢复两套旧版本链接。已提交的数据库迁移不自动回退，应用回滚前应确认数据库兼容性。
+
+部署期间 API 会短暂停止。远程文章管理版本首次上线还需核对迁移记录已包含
+`0005_remote_article_guards`、`0006_device_authorization`，并刷新已打开的旧网页。
+`/v1/ready` 只检查依赖可达，不能代替迁移记录核对。
+
 ## 访问认证
 
 PageHush 使用单人访问码登录，不再依赖 Nginx Basic Auth。
