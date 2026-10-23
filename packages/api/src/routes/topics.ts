@@ -7,6 +7,7 @@ import { articles, topics } from '../db/schema.js';
 import { createTopicBodySchema, updateTopicBodySchema } from './schemas.js';
 import { errorResponseSchema, topicResponseSchema } from '@pagehush/shared';
 import { isUniqueConstraintError, normalizeName } from './utils.js';
+import { lockArticleTaxonomy, reviseArticles } from '../articles/taxonomy.js';
 
 type TopicIdRequest = FastifyRequest<{ Params: { id: string } }>;
 type CreateTopicRequest = FastifyRequest<{ Body: Static<typeof createTopicBodySchema> }>;
@@ -113,11 +114,16 @@ export async function topicRoutes(app: PageHushFastifyInstance) {
       if (!name) return reply.status(400).send({ error: 'name_required' });
 
       try {
-        const [topic] = await app.database
-          .update(topics)
-          .set({ name, updatedAt: new Date() })
-          .where(eq(topics.id, request.params.id))
-          .returning();
+        const topic = await app.database.transaction(async (tx) => {
+          await lockArticleTaxonomy(tx, 'write');
+          await reviseArticles(tx, eq(articles.topicId, request.params.id));
+          const [updated] = await tx
+            .update(topics)
+            .set({ name, updatedAt: new Date() })
+            .where(eq(topics.id, request.params.id))
+            .returning();
+          return updated;
+        });
 
         if (!topic) return reply.status(404).send({ error: 'topic_not_found' });
         return publicTopic(topic);
@@ -147,25 +153,24 @@ export async function topicRoutes(app: PageHushFastifyInstance) {
       const { id } = request.params;
       const moveToTopicId = (request.query as { moveToTopicId?: string }).moveToTopicId;
 
-      const [existing] = await app.database
-        .select({ id: topics.id })
-        .from(topics)
-        .where(eq(topics.id, id));
-      if (!existing) return reply.status(404).send({ error: 'topic_not_found' });
+      const result = await app.database.transaction(async (tx) => {
+        await lockArticleTaxonomy(tx, 'write');
+        const [existing] = await tx.select({ id: topics.id }).from(topics).where(eq(topics.id, id));
+        if (!existing) return { status: 404, error: 'topic_not_found' };
 
-      if (moveToTopicId) {
-        if (moveToTopicId === id) {
-          return reply.status(400).send({ error: 'invalid_move_target' });
+        if (moveToTopicId) {
+          if (moveToTopicId === id) {
+            return { status: 400, error: 'invalid_move_target' };
+          }
+
+          const [target] = await tx
+            .select({ id: topics.id })
+            .from(topics)
+            .where(eq(topics.id, moveToTopicId));
+          if (!target) return { status: 404, error: 'move_target_not_found' };
         }
 
-        const [target] = await app.database
-          .select({ id: topics.id })
-          .from(topics)
-          .where(eq(topics.id, moveToTopicId));
-        if (!target) return reply.status(404).send({ error: 'move_target_not_found' });
-      }
-
-      await app.database.transaction(async (tx) => {
+        await reviseArticles(tx, eq(articles.topicId, id));
         await tx
           .update(articles)
           .set({
@@ -175,8 +180,9 @@ export async function topicRoutes(app: PageHushFastifyInstance) {
           .where(eq(articles.topicId, id));
 
         await tx.delete(topics).where(eq(topics.id, id));
+        return null;
       });
-
+      if (result) return reply.status(result.status).send({ error: result.error });
       return reply.status(204).send();
     },
   );

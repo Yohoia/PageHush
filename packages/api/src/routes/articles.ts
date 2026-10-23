@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { CliArticleError } from '../articles/errors.js';
 import { lockReferencedAssets } from '../articles/assets.js';
+import { lockArticleTaxonomy } from '../articles/taxonomy.js';
 import type { Database } from '../db/client.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { Type } from 'typebox';
@@ -409,11 +410,13 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
         ensureOptionalAssetId(body.coverAssetId);
 
         const article = await app.database.transaction(async (tx) => {
-          await lockReferencedAssets(
-            tx,
-            `${body.content ?? ''}\n${body.cover ?? ''}`,
-            body.coverAssetId,
-          );
+          await lockArticleTaxonomy(tx, 'read');
+          await lockReferencedAssets(tx, {
+            content: body.content ?? '',
+            format: body.format,
+            coverUrl: body.cover,
+            coverAssetId: body.coverAssetId,
+          });
           const topic = await ensureTopic(tx, body.topicId, body.topicName);
           const slug = await generateUniqueSlug(tx, body.slug || title);
           const publishedAt = body.publishedAt
@@ -508,6 +511,7 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
         ensureOptionalAssetId(body.coverAssetId);
 
         const article = await app.database.transaction(async (tx) => {
+          await lockArticleTaxonomy(tx, 'read');
           const [current] = await tx
             .select()
             .from(articles)
@@ -639,11 +643,13 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
             updates.updatedAt = new Date();
           }
 
-          await lockReferencedAssets(
-            tx,
-            `${updates.content ?? current.content}\n${updates.coverUrl === undefined ? (current.coverUrl ?? '') : (updates.coverUrl ?? '')}`,
-            updates.coverAssetId === undefined ? current.coverAssetId : updates.coverAssetId,
-          );
+          await lockReferencedAssets(tx, {
+            content: updates.content ?? current.content,
+            format: updates.format ?? current.format,
+            coverUrl: updates.coverUrl === undefined ? current.coverUrl : updates.coverUrl,
+            coverAssetId:
+              updates.coverAssetId === undefined ? current.coverAssetId : updates.coverAssetId,
+          });
           const [row] = await tx
             .update(articles)
             .set(updates)

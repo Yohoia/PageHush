@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { and, eq, lt, lte, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, lt, lte, ne } from 'drizzle-orm';
 import type { FastifyRequest } from 'fastify';
 import type { PageHushFastifyInstance } from '../types/fastify.js';
 import type { Database } from '../db/client.js';
@@ -9,6 +9,7 @@ import { MAX_ASSET_FILE_SIZE } from '../config.js';
 import { matchesImageSignature } from './assets.js';
 import { isUniqueConstraintError } from './utils.js';
 import { CliArticleError } from '../articles/errors.js';
+import { potentialMdxAssetIds, referencedAssetIds } from '../articles/assets.js';
 import {
   AUTHOR_OPERATION_SCOPE,
   OPERATION_RETENTION_MS,
@@ -154,58 +155,74 @@ export async function cleanupCliOrphanAssets(
 ) {
   const now = options.now ?? new Date();
   const staleBefore = new Date(now.getTime() - OPERATION_RETENTION_MS);
-  const candidates = await db
-    .select({ operationId: cliAssetUploads.operationId, assetId: cliAssetUploads.assetId })
-    .from(cliAssetUploads)
-    .innerJoin(assets, eq(assets.id, cliAssetUploads.assetId))
-    .innerJoin(articleOperations, eq(articleOperations.id, cliAssetUploads.operationId))
-    .where(
-      and(
-        lt(cliAssetUploads.createdAt, staleBefore),
-        lte(articleOperations.expiresAt, now),
-        ne(assets.status, 'deleted'),
-        sql`NOT EXISTS (SELECT 1 FROM articles WHERE articles.cover_asset_id = ${assets.id} OR articles.content ILIKE ('%/v1/assets/' || ${assets.id}::text || '/content%') OR articles.cover_url ILIKE ('%/v1/assets/' || ${assets.id}::text || '/content%'))`,
-      ),
-    )
-    .limit(options.limit ?? 20);
+  const limit = options.limit ?? 20;
   let deleted = 0;
-  for (const candidate of candidates) {
-    const claimed = await db.transaction(async (tx) => {
-      const [operation] = await tx
-        .select()
-        .from(articleOperations)
-        .where(eq(articleOperations.id, candidate.operationId))
-        .for('update');
-      if (operation.expiresAt > now) return null;
-      const [asset] = await tx
-        .select()
-        .from(assets)
-        .where(eq(assets.id, candidate.assetId))
-        .for('update');
-      if (!asset || asset.status === 'deleted') return null;
-      const [reference] = await tx
-        .select({ id: articles.id })
-        .from(articles)
-        .where(
-          sql`${articles.coverAssetId} = ${asset.id} OR ${articles.content} ILIKE ${`%/v1/assets/${asset.id}/content%`} OR ${articles.coverUrl} ILIKE ${`%/v1/assets/${asset.id}/content%`}`,
+  let cursor: string | undefined;
+  while (deleted < limit) {
+    const candidates = await db
+      .select({ operationId: cliAssetUploads.operationId, assetId: cliAssetUploads.assetId })
+      .from(cliAssetUploads)
+      .innerJoin(assets, eq(assets.id, cliAssetUploads.assetId))
+      .innerJoin(articleOperations, eq(articleOperations.id, cliAssetUploads.operationId))
+      .where(
+        and(
+          lt(cliAssetUploads.createdAt, staleBefore),
+          lte(articleOperations.expiresAt, now),
+          ne(assets.status, 'deleted'),
+          cursor ? gt(assets.id, cursor) : undefined,
+        ),
+      )
+      .orderBy(assets.id)
+      .limit(Math.max(limit, 20));
+    if (!candidates.length) break;
+    for (const candidate of candidates) {
+      cursor = candidate.assetId;
+      const claimed = await db.transaction(async (tx) => {
+        const [operation] = await tx
+          .select()
+          .from(articleOperations)
+          .where(eq(articleOperations.id, candidate.operationId))
+          .for('update');
+        if (operation.expiresAt > now) return null;
+        const [asset] = await tx
+          .select()
+          .from(assets)
+          .where(eq(assets.id, candidate.assetId))
+          .for('update');
+        if (!asset || asset.status === 'deleted') return null;
+        const possibleReferences = await tx
+          .select({
+            content: articles.content,
+            format: articles.format,
+            coverUrl: articles.coverUrl,
+            coverAssetId: articles.coverAssetId,
+          })
+          .from(articles);
+        if (
+          possibleReferences.some(
+            (article) =>
+              referencedAssetIds(article).includes(asset.id) ||
+              potentialMdxAssetIds(article).includes(asset.id),
+          )
         )
-        .limit(1);
-      if (reference) return null;
-      // A durable non-ready state prevents a new article from referencing the object after collection starts.
-      await tx
+          return null;
+        // A durable non-ready state prevents a new article from referencing the object after collection starts.
+        await tx
+          .update(assets)
+          .set({ status: 'uploading', updatedAt: now })
+          .where(eq(assets.id, asset.id));
+        return asset;
+      });
+      if (!claimed) continue;
+      await storage.deleteObject(claimed.objectKey);
+      if (claimed.publicObjectKey) await storage.deleteObject(claimed.publicObjectKey);
+      await db
         .update(assets)
-        .set({ status: 'uploading', updatedAt: now })
-        .where(eq(assets.id, asset.id));
-      return asset;
-    });
-    if (!claimed) continue;
-    await storage.deleteObject(claimed.objectKey);
-    if (claimed.publicObjectKey) await storage.deleteObject(claimed.publicObjectKey);
-    await db
-      .update(assets)
-      .set({ status: 'deleted', deletedAt: now, updatedAt: now })
-      .where(eq(assets.id, claimed.id));
-    deleted += 1;
+        .set({ status: 'deleted', deletedAt: now, updatedAt: now })
+        .where(eq(assets.id, claimed.id));
+      deleted += 1;
+      if (deleted >= limit) break;
+    }
   }
 
   return { deleted };

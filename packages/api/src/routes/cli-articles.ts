@@ -29,6 +29,12 @@ const createBody = Type.Object(
   },
   { additionalProperties: false },
 );
+const listQuery = Type.Object({
+  status: Type.Optional(Type.Union([Type.Literal('draft'), Type.Literal('published')])),
+  q: Type.Optional(Type.String()),
+  page: Type.Optional(Type.String({ pattern: '^[1-9][0-9]*$' })),
+  pageSize: Type.Optional(Type.String({ pattern: '^[1-9][0-9]*$' })),
+});
 
 function identifier(id: string) {
   const uuid = UUID.test(id) ? id : articleIdFromShortId(id);
@@ -65,9 +71,10 @@ export async function cliArticleRoutes(app: PageHushFastifyInstance) {
   await cliUploadRoutes(app);
   app.get(
     '/v1/cli/articles',
+    { schema: { querystring: listQuery } },
     async (
       request: FastifyRequest<{
-        Querystring: { status?: string; q?: string; page?: string; pageSize?: string };
+        Querystring: Static<typeof listQuery>;
       }>,
       reply,
     ) => {
@@ -144,7 +151,7 @@ export async function cliArticleRoutes(app: PageHushFastifyInstance) {
           app.database,
           { id, ownerId: owner(request), kind: 'create', hash: fingerprint(body) },
           async (tx) => {
-            await lockReferencedAssets(tx, body.content);
+            await lockReferencedAssets(tx, body);
             const [article] = await tx
               .insert(articles)
               .values({

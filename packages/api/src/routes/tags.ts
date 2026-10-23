@@ -2,11 +2,12 @@ import type { FastifyRequest } from 'fastify';
 import { Type } from 'typebox';
 import type { Static } from 'typebox';
 import type { PageHushFastifyInstance } from '../types/fastify.js';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { articleTags, articles, tags } from '../db/schema.js';
 import { createTagBodySchema, updateTagBodySchema } from './schemas.js';
 import { errorResponseSchema, tagResponseSchema } from '@pagehush/shared';
 import { isUniqueConstraintError, normalizeName } from './utils.js';
+import { lockArticleTaxonomy, reviseArticles } from '../articles/taxonomy.js';
 
 type TagIdRequest = FastifyRequest<{ Params: { id: string } }>;
 type CreateTagRequest = FastifyRequest<{ Body: Static<typeof createTagBodySchema> }>;
@@ -112,11 +113,25 @@ export async function tagRoutes(app: PageHushFastifyInstance) {
       if (!name) return reply.status(400).send({ error: 'name_required' });
 
       try {
-        const [tag] = await app.database
-          .update(tags)
-          .set({ name, updatedAt: new Date() })
-          .where(eq(tags.id, request.params.id))
-          .returning();
+        const tag = await app.database.transaction(async (tx) => {
+          await lockArticleTaxonomy(tx, 'write');
+          await reviseArticles(
+            tx,
+            inArray(
+              articles.id,
+              tx
+                .select({ id: articleTags.articleId })
+                .from(articleTags)
+                .where(eq(articleTags.tagId, request.params.id)),
+            ),
+          );
+          const [updated] = await tx
+            .update(tags)
+            .set({ name, updatedAt: new Date() })
+            .where(eq(tags.id, request.params.id))
+            .returning();
+          return updated;
+        });
 
         if (!tag) return reply.status(404).send({ error: 'tag_not_found' });
         return publicTag(tag);
@@ -142,10 +157,20 @@ export async function tagRoutes(app: PageHushFastifyInstance) {
     async (request: TagIdRequest, reply) => {
       if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
 
-      const deleted = await app.database
-        .delete(tags)
-        .where(eq(tags.id, request.params.id))
-        .returning({ id: tags.id });
+      const deleted = await app.database.transaction(async (tx) => {
+        await lockArticleTaxonomy(tx, 'write');
+        await reviseArticles(
+          tx,
+          inArray(
+            articles.id,
+            tx
+              .select({ id: articleTags.articleId })
+              .from(articleTags)
+              .where(eq(articleTags.tagId, request.params.id)),
+          ),
+        );
+        return tx.delete(tags).where(eq(tags.id, request.params.id)).returning({ id: tags.id });
+      });
 
       if (!deleted.length) return reply.status(404).send({ error: 'tag_not_found' });
       return reply.status(204).send();

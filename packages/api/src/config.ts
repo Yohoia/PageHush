@@ -32,6 +32,25 @@ export function readAuthConfig(): AuthConfig | null {
   };
 }
 
+export function readAssetOrigin() {
+  const configured = process.env.PAGEHUSH_ASSET_ORIGIN?.trim();
+  const url = new URL(
+    configured || process.env.PAGEHUSH_DEVICE_VERIFICATION_URI || 'https://pagehush.yohoia.cn',
+  );
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    (configured && url.pathname !== '/')
+  )
+    throw new Error(
+      'Asset origin must be an HTTP(S) origin without credentials, path, query, or fragment',
+    );
+  return url.origin;
+}
+
 export function readStorageConfig(): StorageConfig | null {
   const endpoint = process.env.MINIO_ENDPOINT?.trim();
   const bucket = process.env.MINIO_BUCKET?.trim();

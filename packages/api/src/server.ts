@@ -16,6 +16,7 @@ import {
   readAuthConfig,
   readDatabaseConfig,
   readStorageConfig,
+  readAssetOrigin,
   type AuthConfig,
 } from './config.js';
 import { createDatabase, type DatabaseHandle } from './db/client.js';
@@ -44,6 +45,7 @@ export interface BuildServerOptions {
 }
 
 export async function buildServer(options: BuildServerOptions = {}) {
+  readAssetOrigin();
   const databaseConfig = options.database ? null : readDatabaseConfig();
   const storageConfig = options.storage ? null : readStorageConfig();
   const authConfig = options.authConfig ?? readAuthConfig();
