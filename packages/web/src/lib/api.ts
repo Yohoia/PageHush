@@ -5,6 +5,9 @@ import type {
   AuthLoginResponse,
   AuthSessionResponse,
   CreateArticleBody,
+  DeviceListResponse,
+  DeviceVerificationBody,
+  DeviceVerificationResponse,
   TagResponse,
   TopicResponse,
 } from '@pagehush/shared';
@@ -77,6 +80,26 @@ export function logout() {
   return request<void>('/v1/auth/logout', { method: 'DELETE' });
 }
 
+export function getDeviceVerification(userCode: string) {
+  const query = new URLSearchParams({ user_code: userCode });
+  return request<DeviceVerificationResponse>(`/v1/auth/device/verify?${query}`);
+}
+
+export function verifyDevice(payload: DeviceVerificationBody) {
+  return request<DeviceVerificationResponse>('/v1/auth/device/verify', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listDevices() {
+  return request<DeviceListResponse>('/v1/auth/devices');
+}
+
+export function revokeDevice(id: string) {
+  return request<void>(`/v1/auth/devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
 const LIST_PAGE_SIZE = 200;
 const MAX_LIST_PAGES = 20;
 
@@ -107,15 +130,23 @@ export function createArticle(payload: ArticleSavePayload) {
   });
 }
 
-export function updateArticle(slug: string, payload: Partial<ArticleSavePayload>) {
+export function updateArticle(
+  slug: string,
+  payload: Partial<ArticleSavePayload>,
+  revision: ApiArticle['revision'],
+) {
   return request<ApiArticle>(`/v1/articles/${encodeURIComponent(slug)}`, {
     method: 'PATCH',
+    headers: { 'If-Match': revision },
     body: JSON.stringify(payload),
   });
 }
 
-export function deleteArticle(slug: string) {
-  return request<void>(`/v1/articles/${encodeURIComponent(slug)}`, { method: 'DELETE' });
+export function deleteArticle(slug: string, revision: ApiArticle['revision']) {
+  return request<void>(`/v1/articles/${encodeURIComponent(slug)}`, {
+    method: 'DELETE',
+    headers: { 'If-Match': revision },
+  });
 }
 
 export function listTopics() {

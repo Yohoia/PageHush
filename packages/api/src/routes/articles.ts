@@ -1,3 +1,6 @@
+import { randomUUID } from 'node:crypto';
+import { CliArticleError } from '../articles/errors.js';
+import { lockReferencedAssets } from '../articles/assets.js';
 import type { Database } from '../db/client.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { Type } from 'typebox';
@@ -37,6 +40,9 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 class ArticleValidationError extends Error {
   constructor(
     readonly code:
+      | 'revision_conflict'
+      | 'publish_fields_required'
+      | 'asset_not_ready'
       | 'topic_not_found'
       | 'description_required_for_published'
       | 'slug_immutable_for_published'
@@ -115,10 +121,12 @@ function articleCoverUrl(row: Pick<ArticleRow, 'coverAssetId' | 'coverUrl'>) {
   return row.coverAssetId ? `/v1/assets/${row.coverAssetId}/content` : row.coverUrl;
 }
 
-function publicArticle(row: ArticleRow, topicName: string | null, tagNames: string[]) {
+export function publicArticle(row: ArticleRow, topicName: string | null, tagNames: string[]) {
   return {
     id: row.id,
     shortId: articleShortId(row.id),
+    revision: row.revision,
+    firstPublishedAt: row.firstPublishedAt?.toISOString() ?? null,
     slug: row.slug,
     title: row.title,
     description: row.description,
@@ -273,8 +281,10 @@ async function topicNameForArticle(db: Database, topicId: string | null) {
 }
 
 function sendArticleValidationError(reply: FastifyReply, error: unknown) {
+  if (error instanceof CliArticleError)
+    return reply.status(error.statusCode).send({ error: error.code });
   if (!(error instanceof ArticleValidationError)) return false;
-  return reply.status(400).send({ error: error.code });
+  return reply.status(error.code === 'revision_conflict' ? 409 : 400).send({ error: error.code });
 }
 
 export async function articleRoutes(app: PageHushFastifyInstance) {
@@ -386,6 +396,8 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
       const title = body.title.trim();
       const description = body.description ?? '';
 
+      if (body.status === 'published' && (!title || !body.content?.trim()))
+        return reply.status(400).send({ error: 'publish_fields_required' });
       if (body.status === 'published' && !description.trim()) {
         return reply.status(400).send({ error: 'description_required_for_published' });
       }
@@ -397,6 +409,11 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
         ensureOptionalAssetId(body.coverAssetId);
 
         const article = await app.database.transaction(async (tx) => {
+          await lockReferencedAssets(
+            tx,
+            `${body.content ?? ''}\n${body.cover ?? ''}`,
+            body.coverAssetId,
+          );
           const topic = await ensureTopic(tx, body.topicId, body.topicName);
           const slug = await generateUniqueSlug(tx, body.slug || title);
           const publishedAt = body.publishedAt
@@ -435,6 +452,7 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
               coverUrl: body.cover || null,
               coverAlt: body.coverAlt || null,
               publishedAt,
+              firstPublishedAt: body.status === 'published' ? publishedAt : null,
               updatedAt,
               recordUpdatedAt: new Date(),
             })
@@ -479,6 +497,9 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
     async (request: UpdateArticleRequest, reply) => {
       if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
 
+      const expected = request.headers['if-match'];
+      if (typeof expected !== 'string' || !expected)
+        return reply.status(428).send({ error: 'revision_required' });
       const body = request.body;
       try {
         ensureOptionalHttpUrl(body.sourceUrl, 'invalid_source_url');
@@ -490,9 +511,11 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
           const [current] = await tx
             .select()
             .from(articles)
-            .where(and(articleIdentifier(request.params.slug), isNull(articles.deletedAt)));
+            .where(and(articleIdentifier(request.params.slug), isNull(articles.deletedAt)))
+            .for('update');
 
           if (!current) return null;
+          if (current.revision !== expected) throw new ArticleValidationError('revision_conflict');
 
           if (
             body.slug !== undefined &&
@@ -514,7 +537,25 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
             throw new ArticleValidationError('description_required_for_published');
           }
 
-          const updates: Partial<ArticleRow> = { recordUpdatedAt: new Date() };
+          if (
+            (body.status ?? current.status) === 'published' &&
+            (!(body.title ?? current.title).trim() ||
+              !(body.content ?? current.content).trim() ||
+              !nextDescription.trim())
+          )
+            throw new ArticleValidationError('publish_fields_required');
+          const updates: Partial<ArticleRow> = {
+            recordUpdatedAt: new Date(),
+            revision: randomUUID(),
+          };
+          if (
+            body.status === 'published' &&
+            current.status !== 'published' &&
+            !current.firstPublishedAt
+          ) {
+            updates.firstPublishedAt = new Date();
+            updates.publishedAt = updates.firstPublishedAt;
+          }
           if (body.title !== undefined) updates.title = body.title.trim();
           if (body.description !== undefined) updates.description = body.description;
           if (body.content !== undefined) updates.content = body.content;
@@ -552,7 +593,7 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
             updates.slug = await generateUniqueSlug(tx, body.slug, current.id);
           }
 
-          if (body.publishedAt !== undefined) {
+          if (body.publishedAt !== undefined && !updates.firstPublishedAt) {
             updates.publishedAt = parseDate(body.publishedAt, 'invalid_published_at');
           }
 
@@ -592,14 +633,21 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
 
           if (explicitUpdatedAt !== undefined) {
             updates.updatedAt = explicitUpdatedAt;
+          } else if (updates.firstPublishedAt) {
+            updates.updatedAt = null;
           } else if (contentFieldsChanged) {
             updates.updatedAt = new Date();
           }
 
+          await lockReferencedAssets(
+            tx,
+            `${updates.content ?? current.content}\n${updates.coverUrl === undefined ? (current.coverUrl ?? '') : (updates.coverUrl ?? '')}`,
+            updates.coverAssetId === undefined ? current.coverAssetId : updates.coverAssetId,
+          );
           const [row] = await tx
             .update(articles)
             .set(updates)
-            .where(eq(articles.id, current.id))
+            .where(and(eq(articles.id, current.id), eq(articles.revision, expected)))
             .returning();
 
           if (body.coverAssetId) {
@@ -638,10 +686,29 @@ export async function articleRoutes(app: PageHushFastifyInstance) {
   app.delete('/v1/articles/:slug', async (request: ArticleSlugRequest, reply) => {
     if (!app.database) return reply.status(503).send({ error: 'database_not_configured' });
 
-    await app.database
+    const expected = request.headers['if-match'];
+    if (typeof expected !== 'string' || !expected)
+      return reply.status(428).send({ error: 'revision_required' });
+    const changed = await app.database
       .update(articles)
-      .set({ deletedAt: new Date(), recordUpdatedAt: new Date() })
-      .where(and(articleIdentifier(request.params.slug), isNull(articles.deletedAt)));
+      .set({ deletedAt: new Date(), recordUpdatedAt: new Date(), revision: randomUUID() })
+      .where(
+        and(
+          articleIdentifier(request.params.slug),
+          isNull(articles.deletedAt),
+          eq(articles.revision, expected),
+        ),
+      )
+      .returning({ id: articles.id });
+    if (!changed.length) {
+      const [exists] = await app.database
+        .select({ id: articles.id })
+        .from(articles)
+        .where(and(articleIdentifier(request.params.slug), isNull(articles.deletedAt)));
+      return reply
+        .status(exists ? 409 : 404)
+        .send({ error: exists ? 'revision_conflict' : 'article_not_found' });
+    }
 
     return reply.status(204).send();
   });

@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
-import { LogOut, Plus } from 'lucide-react';
+import { LogOut, Monitor, Plus } from 'lucide-react';
 import { ServiceStatus } from './ServiceStatus';
 import { pageTransition, pageVariants } from '../motionPresets';
 import { getAuthSession, logout } from '@/lib/api';
 import { peekLibraryReturn } from '@/lib/library-return';
 
-const navigation = [{ to: '/editor', label: '写作', icon: Plus, end: false }];
+const navigation = [
+  { to: '/editor', label: '写作', icon: Plus, end: false },
+  { to: '/devices', label: '设备', icon: Monitor, end: false },
+];
 const copyrightYear = new Intl.DateTimeFormat('en-CA', {
   year: 'numeric',
   timeZone: 'Asia/Shanghai',
@@ -86,9 +89,9 @@ export function AppShell() {
       ) : (
         <>
           <header className="bg-paper/95 backdrop-blur">
-            <div className="mx-auto flex min-h-20 w-full max-w-[1400px] items-center gap-6 px-6 lg:px-10">
+            <div className="mx-auto flex min-h-20 w-full max-w-[1400px] items-center gap-2 px-4 sm:gap-6 sm:px-6 lg:px-10">
               <a
-                className="flex items-center gap-3 sm:gap-4"
+                className="flex shrink-0 items-center gap-2 sm:gap-4"
                 href="/"
                 aria-label="页息 PageHush 首页"
               >
@@ -117,7 +120,7 @@ export function AppShell() {
                     to={item.to}
                     end={item.end}
                     className={({ isActive }) =>
-                      `flex items-center gap-2 rounded-[3px] px-3 py-2 transition ${
+                      `flex items-center gap-2 whitespace-nowrap rounded-[3px] px-2 py-2 transition sm:px-3 ${
                         isActive
                           ? 'bg-selected text-ink'
                           : 'text-muted hover:bg-hover hover:text-ink'
@@ -132,7 +135,7 @@ export function AppShell() {
               <ServiceStatus />
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-[3px] px-3 py-2 text-sm text-muted transition hover:bg-hover hover:text-ink"
+                className="flex items-center gap-2 whitespace-nowrap rounded-[3px] px-2 py-2 text-sm text-muted transition hover:bg-hover hover:text-ink sm:px-3"
                 onClick={() => {
                   void handleLogout();
                 }}

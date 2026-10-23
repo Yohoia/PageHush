@@ -27,17 +27,25 @@ import { assetRoutes } from './routes/assets.js';
 import { topicRoutes } from './routes/topics.js';
 import { tagRoutes } from './routes/tags.js';
 import { authRoutes, findValidSession } from './routes/auth.js';
+import { deviceAuthRoutes } from './routes/device-auth.js';
+import { cliArticleRoutes } from './routes/cli-articles.js';
+import {
+  findValidDeviceSession,
+  readDeviceAuthConfig,
+  type DeviceAuthConfig,
+} from './auth/device-auth.js';
 
 /** Dependencies can be injected so route behaviour is testable without live services. */
 export interface BuildServerOptions {
   database?: DatabaseHandle;
   storage?: StoragePort;
   authConfig?: AuthConfig;
+  deviceAuth?: Partial<DeviceAuthConfig>;
 }
 
 export async function buildServer(options: BuildServerOptions = {}) {
-  const databaseConfig = readDatabaseConfig();
-  const storageConfig = readStorageConfig();
+  const databaseConfig = options.database ? null : readDatabaseConfig();
+  const storageConfig = options.storage ? null : readStorageConfig();
   const authConfig = options.authConfig ?? readAuthConfig();
 
   const app = Fastify({
@@ -52,6 +60,7 @@ export async function buildServer(options: BuildServerOptions = {}) {
   app.decorate('storage', storage);
   app.decorate('databaseConfigured', Boolean(database));
   app.decorate('authConfig', authConfig);
+  app.decorate('deviceAuth', readDeviceAuthConfig(options.deviceAuth));
   app.decorate('storageConfigured', Boolean(storage));
 
   await app.register(cookie);
@@ -86,6 +95,8 @@ export async function buildServer(options: BuildServerOptions = {}) {
     'GET /v1/ready',
     'POST /v1/auth/login',
     'POST /v1/auth/login-extension',
+    'POST /v1/auth/device/code',
+    'POST /v1/auth/device/token',
     'GET /v1/auth/session',
     'DELETE /v1/auth/logout',
   ]);
@@ -113,6 +124,24 @@ export async function buildServer(options: BuildServerOptions = {}) {
 
     if (!app.authConfig || !app.database) {
       await reply.status(503).send({ error: 'auth_not_configured' });
+      return;
+    }
+
+    const deviceRoute =
+      pathname.startsWith('/v1/cli/') ||
+      pathname === '/v1/auth/device/session' ||
+      pathname === '/v1/auth/device/logout';
+    if (deviceRoute) {
+      const device = await findValidDeviceSession(app, request);
+      if (!device) {
+        await reply.status(401).send({ error: 'unauthorized' });
+        return;
+      }
+      request.deviceSession = { id: device.id, expiresAt: device.expiresAt };
+      return;
+    }
+    if (request.headers.authorization) {
+      await reply.status(403).send({ error: 'device_scope_forbidden' });
       return;
     }
 
@@ -194,10 +223,12 @@ export async function buildServer(options: BuildServerOptions = {}) {
   app.log.info({ bucket: storage.bucket }, 'MinIO bucket ready');
 
   await authRoutes(app);
+  await deviceAuthRoutes(app);
   await topicRoutes(app);
   await tagRoutes(app);
   await articleRoutes(app);
   await assetRoutes(app);
+  await cliArticleRoutes(app);
 
   return app;
 }

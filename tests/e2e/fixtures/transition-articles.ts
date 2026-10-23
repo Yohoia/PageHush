@@ -2,6 +2,8 @@ import type { ApiArticle } from '../../../packages/web/src/lib/api';
 import { tocArticle, tocFixtureResponse } from './toc-article';
 
 const optionalArticleFields = {
+  revision: 'rev-1',
+  firstPublishedAt: null,
   shortId: null,
   author: 'Yohoia',
   sourceUrl: null,

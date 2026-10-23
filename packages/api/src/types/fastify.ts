@@ -3,6 +3,7 @@ import type { FastifyBaseLogger, FastifyInstance, RawServerDefault } from 'fasti
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import type { Database, DatabaseHandle } from '../db/client.js';
 import type { AuthConfig } from '../config.js';
+import type { DeviceAuthConfig } from '../auth/device-auth.js';
 import type { StoragePort } from '../storage/port.js';
 
 export interface PageHushAuthSession {
@@ -23,6 +24,7 @@ export interface PageHushFastifyInstance extends FastifyInstance<
   authConfig?: AuthConfig | null;
   databaseConfigured: boolean;
   storageConfigured: boolean;
+  deviceAuth: DeviceAuthConfig;
 }
 
 declare module 'fastify' {
@@ -33,9 +35,11 @@ declare module 'fastify' {
     authConfig?: AuthConfig | null;
     databaseConfigured: boolean;
     storageConfigured: boolean;
+    deviceAuth: DeviceAuthConfig;
   }
 
   interface FastifyRequest {
     authSession?: PageHushAuthSession;
+    deviceSession?: PageHushAuthSession;
   }
 }

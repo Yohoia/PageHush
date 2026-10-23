@@ -77,7 +77,7 @@ export function useArticleSave(options: UseArticleSaveOptions) {
       };
 
       const saved = remoteArticle
-        ? await updateArticle(remoteArticle.id, payload)
+        ? await updateArticle(remoteArticle.id, payload, remoteArticle.revision)
         : await createArticle(payload);
 
       setRemoteArticle(saved);
@@ -90,7 +90,9 @@ export function useArticleSave(options: UseArticleSaveOptions) {
     } catch (error) {
       setSaveError(
         error instanceof ApiError
-          ? '操作失败，请检查连接后重试'
+          ? error.code === 'revision_conflict'
+            ? '文章已在其他地方更新，当前输入已保留。请先复制未保存内容，再重新打开文章核对。'
+            : '操作失败，请检查连接后重试'
           : error instanceof Error
             ? error.message
             : '保存失败',
@@ -117,10 +119,15 @@ export function useArticleSave(options: UseArticleSaveOptions) {
     actionLockRef.current = true;
     setIsSaving(true);
     try {
-      await deleteArticle(remoteArticle.id);
+      await deleteArticle(remoteArticle.id, remoteArticle.revision);
       navigate('/', { replace: true });
-    } catch {
-      throw new Error('删除失败，请检查连接后重试');
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'revision_conflict') {
+        throw new Error('文章已在其他地方更新，未删除。当前输入已保留，请重新打开文章核对。', {
+          cause: error,
+        });
+      }
+      throw new Error('删除失败，请检查连接后重试', { cause: error });
     } finally {
       actionLockRef.current = false;
       setIsSaving(false);

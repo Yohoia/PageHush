@@ -6,8 +6,18 @@ export {
   authSessionResponseSchema,
   authLoginResponseSchema,
   authExtensionLoginResponseSchema,
+  deviceVerificationBodySchema,
+  deviceVerificationResponseSchema,
+  deviceListResponseSchema,
 } from './auth.js';
-export type { AuthSessionResponse, AuthLoginResponse, AuthExtensionLoginResponse } from './auth.js';
+export type {
+  AuthSessionResponse,
+  AuthLoginResponse,
+  AuthExtensionLoginResponse,
+  DeviceVerificationBody,
+  DeviceVerificationResponse,
+  DeviceListResponse,
+} from './auth.js';
 export { errorResponseSchema } from './errors.js';
 export {
   articleStatusSchema,

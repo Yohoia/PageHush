@@ -1,0 +1,106 @@
+.device-page {
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+.device-page h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.device-introduction {
+  margin-top: 0.75rem;
+  margin-bottom: 2rem;
+  color: var(--color-muted);
+}
+
+.device-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.device-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: 3px;
+}
+
+.device-card h2 {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.device-card p {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  line-height: 1.75;
+}
+
+.device-page button {
+  border: 1px solid var(--color-line);
+  border-radius: 3px;
+  padding: 0.5rem 0.875rem;
+  cursor: pointer;
+}
+
+.device-page button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.device-error {
+  color: var(--color-danger, #ac302f);
+  margin-block: 1rem;
+}
+
+.device-code-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.device-code-form > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.device-code-form input {
+  min-width: 0;
+  border: 1px solid var(--color-line);
+  border-radius: 3px;
+  padding: 0.5rem 0.75rem;
+  font-family: monospace;
+}
+
+.device-authorization {
+  margin-block: 2rem;
+  line-height: 1.75;
+}
+
+.device-authorization h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.device-user-code {
+  margin-block: 0.5rem 1rem;
+  font: 1.5rem monospace;
+  letter-spacing: 0.1em;
+}
+
+.device-authorization-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.device-management-link {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

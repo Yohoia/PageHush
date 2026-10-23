@@ -117,6 +117,8 @@ const nullableDateTime = () => Type.Union([isoDateTime(), Type.Null()]);
 export const articleResponseSchema = Type.Object({
   id: Type.String(),
   shortId: nullableString(),
+  revision: Type.String(),
+  firstPublishedAt: nullableDateTime(),
   slug: Type.String(),
   title: Type.String(),
   description: Type.String(),

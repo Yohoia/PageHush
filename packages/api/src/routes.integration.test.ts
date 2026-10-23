@@ -110,7 +110,7 @@ describe('articles', () => {
     expect(bySlug.statusCode).toBe(200);
   });
 
-  it('hides internal details when an unexpected server error occurs', async () => {
+  it('rejects a missing referenced asset before creating the article', async () => {
     const cookie = await login();
     const response = await server.app.inject({
       method: 'POST',
@@ -124,8 +124,8 @@ describe('articles', () => {
       },
     });
 
-    expect(response.statusCode).toBe(500);
-    expect(response.json()).toEqual({ error: 'internal_error' });
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error: 'asset_not_ready' });
     expect(response.body).not.toContain('foreign key');
   });
 
@@ -155,7 +155,7 @@ describe('articles', () => {
     const remove = await server.app.inject({
       method: 'DELETE',
       url: '/v1/articles/reused-slug',
-      headers: { cookie },
+      headers: { cookie, 'if-match': first.json().revision },
     });
     expect(remove.statusCode).toBe(204);
 
@@ -254,7 +254,7 @@ describe('taxonomy', () => {
     const remove = await server.app.inject({
       method: 'DELETE',
       url: `/v1/articles/${article.json().id}`,
-      headers: { cookie },
+      headers: { cookie, 'if-match': article.json().revision },
     });
     expect(remove.statusCode).toBe(204);
 
@@ -271,5 +271,45 @@ describe('taxonomy', () => {
       headers: { cookie },
     });
     expect(missing.statusCode).toBe(404);
+  });
+});
+
+describe('shared article revisions', () => {
+  it('requires a current revision for web updates and refuses a stale delete', async () => {
+    const cookie = await login();
+    const created = await server.app.inject({
+      method: 'POST',
+      url: '/v1/articles',
+      headers: { cookie },
+      payload: { title: '版本保护', description: '描述', content: '正文' },
+    });
+    const article = created.json();
+    const missing = await server.app.inject({
+      method: 'PATCH',
+      url: `/v1/articles/${article.id}`,
+      headers: { cookie },
+      payload: { title: '无条件写入' },
+    });
+    expect(missing.statusCode).toBe(428);
+    const updated = await server.app.inject({
+      method: 'PATCH',
+      url: `/v1/articles/${article.id}`,
+      headers: { cookie, 'if-match': article.revision },
+      payload: { title: '新标题' },
+    });
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json().revision).not.toBe(article.revision);
+    const stale = await server.app.inject({
+      method: 'DELETE',
+      url: `/v1/articles/${article.id}`,
+      headers: { cookie, 'if-match': article.revision },
+    });
+    expect(stale.statusCode).toBe(409);
+    const detail = await server.app.inject({
+      method: 'GET',
+      url: `/v1/articles/${article.id}`,
+      headers: { cookie },
+    });
+    expect(detail.json().title).toBe('新标题');
   });
 });

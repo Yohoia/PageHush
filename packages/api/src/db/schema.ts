@@ -3,6 +3,7 @@ import {
   bigint,
   index,
   integer,
+  jsonb,
   uniqueIndex,
   pgEnum,
   pgTable,
@@ -96,6 +97,8 @@ export const articles = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     slug: text('slug').notNull(),
     title: text('title').notNull(),
+    revision: uuid('revision').notNull().defaultRandom(),
+    firstPublishedAt: timestamp('first_published_at', { withTimezone: true }),
     description: text('description').notNull().default(''),
     content: text('content').notNull().default(''),
     format: articleFormatEnum('format').notNull().default('md'),
@@ -175,3 +178,35 @@ export const articleTagRelations = relations(articleTags, ({ one }) => ({
 }));
 
 export const databaseName = sql`current_database()`;
+
+export const articleOperations = pgTable('article_operations', {
+  id: uuid('id').primaryKey(),
+  ownerId: text('owner_id').notNull(),
+  kind: text('kind').notNull(),
+  fingerprint: text('fingerprint'),
+  result: jsonb('result'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+});
+
+export const cliAssetUploads = pgTable(
+  'cli_asset_uploads',
+  {
+    id: uuid('id').primaryKey(),
+    operationId: uuid('operation_id')
+      .notNull()
+      .references(() => articleOperations.id),
+    assetId: uuid('asset_id')
+      .notNull()
+      .references(() => assets.id),
+    fingerprint: text('fingerprint').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('cli_asset_uploads_created_at_idx').on(table.createdAt)],
+);
+
+export {
+  deviceAuthorizations,
+  deviceSessions,
+  deviceAuthorizationStatus,
+} from './device-auth-schema.js';

@@ -3,6 +3,8 @@ import { Navigate, Route, Routes, useParams } from 'react-router';
 import { AppShell } from './components/AppShell';
 import { LoginPage } from './pages/LoginPage';
 import { LibraryPage } from './pages/LibraryPage';
+import { DevicesPage } from './pages/DevicesPage';
+import { DeviceAuthorizationPage } from './pages/DeviceAuthorizationPage';
 import { preloadEditorPage } from './lib/editor-route';
 import './styles/article-transition.css';
 
@@ -30,6 +32,8 @@ export function App() {
       <Route path="login" element={<LoginPage />} />
       <Route element={<AppShell />}>
         <Route index element={<LibraryPage />} />
+        <Route path="devices" element={<DevicesPage />} />
+        <Route path="device" element={<DeviceAuthorizationPage />} />
         <Route
           path="editor"
           element={

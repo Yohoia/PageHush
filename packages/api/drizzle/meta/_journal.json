@@ -36,6 +36,20 @@
       "when": 1791612659093,
       "tag": "0004_melodic_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792742400000,
+      "tag": "0005_remote_article_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792744200000,
+      "tag": "0006_device_authorization",
+      "breakpoints": true
     }
   ]
 }

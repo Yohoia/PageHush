@@ -2,7 +2,7 @@ import type { FastifyRequest } from 'fastify';
 import type { PageHushFastifyInstance } from '../types/fastify.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
-import { and, eq, lt } from 'drizzle-orm';
+import { and, eq, lt, sql } from 'drizzle-orm';
 import { assets } from '../db/schema.js';
 import type { Database } from '../db/client.js';
 import type { StoragePort } from '../storage/port.js';
@@ -11,7 +11,7 @@ import { assetResponseSchema, errorResponseSchema } from '@pagehush/shared';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-function matchesImageSignature(buffer: Buffer, mimeType: string) {
+export function matchesImageSignature(buffer: Buffer, mimeType: string) {
   if (mimeType === 'image/jpeg') {
     return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
   }
@@ -43,7 +43,13 @@ async function cleanupStaleUploads(db: Database, storage: StoragePort) {
   const staleRows = await db
     .select({ id: assets.id, objectKey: assets.objectKey })
     .from(assets)
-    .where(and(eq(assets.status, 'uploading'), lt(assets.createdAt, staleBefore)))
+    .where(
+      and(
+        eq(assets.status, 'uploading'),
+        lt(assets.createdAt, staleBefore),
+        sql`NOT EXISTS (SELECT 1 FROM cli_asset_uploads WHERE cli_asset_uploads.asset_id = ${assets.id})`,
+      ),
+    )
     .limit(20);
 
   for (const row of staleRows) {
@@ -176,7 +182,7 @@ export async function assetRoutes(app: PageHushFastifyInstance) {
         .from(assets)
         .where(eq(assets.id, request.params.id));
 
-      if (!asset || asset.status === 'deleted') {
+      if (!asset || asset.status !== 'ready') {
         return reply.status(404).send({ error: 'asset_not_found' });
       }
 

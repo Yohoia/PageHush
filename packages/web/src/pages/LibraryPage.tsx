@@ -187,9 +187,12 @@ export function LibraryPage() {
     setPublishing(new Set(publishingRef.current));
     setPublishErrors((current) => ({ ...current, [slug]: '' }));
     try {
-      // Read the latest record; publishing must not overwrite a newer edit.
+      const selected = articles.find((article) => article.slug === slug);
+      if (!selected || !('revision' in selected)) {
+        throw new Error('文章版本尚未加载，请刷新列表后重试');
+      }
       const latest = await getArticle(slug);
-      const status = latest.status === 'published' ? 'draft' : 'published';
+      const status = selected.status === 'published' ? 'draft' : 'published';
       if (status === 'published' && (!latest.title.trim() || !latest.content.trim())) {
         throw new Error('请先填写文章标题和正文');
       }
@@ -199,10 +202,11 @@ export function LibraryPage() {
           .replace(/[#>*_`[\]()!]/g, '')
           .trim()
           .slice(0, 500);
-      const saved = await updateArticle(slug, {
-        status,
-        ...(status === 'published' ? { description, publishedAt: new Date().toISOString() } : {}),
-      });
+      const saved = await updateArticle(
+        slug,
+        { status, ...(status === 'published' ? { description } : {}) },
+        selected.revision,
+      );
       setArticles((current) => current.map((article) => (article.slug === slug ? saved : article)));
       window.clearTimeout(feedbackTimersRef.current.get(slug));
       feedbackTimersRef.current.delete(slug);
@@ -233,9 +237,11 @@ export function LibraryPage() {
       setPublishErrors((current) => ({
         ...current,
         [slug]:
-          error instanceof Error && !(error instanceof ApiError)
-            ? error.message
-            : '操作失败，请重试',
+          error instanceof ApiError && error.code === 'revision_conflict'
+            ? '文章已在其他地方更新，请刷新列表后核对再操作。'
+            : error instanceof Error && !(error instanceof ApiError)
+              ? error.message
+              : '操作失败，请重试',
       }));
     } finally {
       publishingRef.current.delete(slug);
